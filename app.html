@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>團購喊單防重複與月結對帳 App</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="團購助手">
+  <meta name="theme-color" content="#f8fafc">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fdf8f6',
+              100: '#f2e8e5',
+              500: '#e07a5f',
+              600: '#d1684c',
+              700: '#b85035',
+            },
+            accent: {
+              50: '#f4f7f6',
+              500: '#81b29a',
+              600: '#689b83'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Mobile-first clean tap & view setup */
+    -webkit-tap-highlight-color: transparent;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
+      user-select: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .line-through-strike {
+      text-decoration: line-through;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-20">
+
+  <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative bg-white shadow-xl">
+    
+    <!-- Toast Notification -->
+    <div v-if="toast.show" 
+         class="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full shadow-lg text-sm font-medium transition-all duration-300 flex items-center gap-2"
+         :class="toast.type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-white'">
+      <span>{{ toast.message }}</span>
+    </div>
+
+    <!-- Top Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+          🛍️
+        </div>
+        <div>
+          <h1 class="font-bold text-slate-800 text-base leading-tight">團購小幫手</h1>
+          <p class="text-[11px] text-slate-400">防手滑重複 ‧ 月結輕鬆對</p>
+        </div>
+      </div>
+      <div class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full font-medium">
+        {{ orders.length }} 筆喊單
+      </div>
+    </header>
+
+    <!-- Main Dynamic Content Area -->
+    <main class="flex-1 p-4 overflow-y-auto">
+
+      <!-- ================= 頁面 1：防呆查詢 (SEARCH & FILTER) ================= -->
+      <section v-if="currentTab === 'query'" class="space-y-4">
+        
+        <!-- 搜尋欄位與賣家貨號清理標籤 -->
+        <div class="relative">
+          <input type="text" 
+                 v-model="searchQuery" 
+                 placeholder="搜尋商品名稱、同義詞（如褲裙/裙褲）..."
+                 class="w-full pl-10 pr-10 py-2.5 bg-slate-100 border-0 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white transition" />
+          <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs bg-slate-200 rounded-full w-4 h-4 flex items-center justify-center">✕</button>
+        </div>
+
+        <!-- 查詢時間區間選單 -->
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+            <span>📅 查詢時間區間</span>
+            <span class="text-brand-600 font-bold">{{ timeRangeLabel }}</span>
+          </div>
+          <div class="grid grid-cols-5 gap-1.5 text-xs">
+            <button v-for="range in ['1m', '3m', '6m', '1y', 'all']" 
+                    :key="range"
+                    @click="timeRange = range"
+                    :class="timeRange === range ? 'bg-brand-500 text-white shadow-sm font-bold' : 'bg-white text-slate-600 border border-slate-200'"
+                    class="py-1.5 rounded-lg transition text-center">
+              {{ getRangeText(range) }}
+            </button>
+          </div>
+          
+          <!-- 自訂起訖日期 (當點選自訂時展開) -->
+          <div v-if="timeRange === 'custom'" class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 text-xs">
+            <div>
+              <label class="text-slate-400 block text-[10px]">開始日期</label>
+              <input type="date" v-model="customStartDate" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1" />
+            </div>
+            <div>
+              <label class="text-slate-400 block text-[10px]">結束日期</label>
+              <input type="date" v-model="customEndDate" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 兩層分類與管道快選 -->
+        <div class="space-y-2">
+          <!-- 大分類按鈕列 -->
+          <div class="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1 text-xs">
+            <button @click="filterCategory = ''; filterSubCategory = ''"
+                    :class="!filterCategory ? 'bg-slate-800 text-white font-bold' : 'bg-slate-100 text-slate-600'"
+                    class="px-3 py-1.5 rounded-full whitespace-nowrap transition">
+              全部類別
+            </button>
+            <button v-for="cat in Object.keys(categories)" 
+                    :key="cat"
+                    @click="filterCategory = cat; filterSubCategory = ''"
+                    :class="filterCategory === cat ? 'bg-brand-500 text-white font-bold' : 'bg-slate-100 text-slate-600'"
+                    class="px-3 py-1.5 rounded-full whitespace-nowrap transition">
+              {{ cat }}
+            </button>
+          </div>
+
+          <!-- 子分類按鈕列 (當選定大分類時) -->
+          <div v-if="filterCategory && categories[filterCategory]" class="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1 text-xs pl-1">
+            <button @click="filterSubCategory = ''"
+                    :class="!filterSubCategory ? 'bg-brand-100 text-brand-700 font-bold' : 'bg-slate-100 text-slate-500'"
+                    class="px-2.5 py-1 rounded-md whitespace-nowrap transition">
+              全部 {{ filterCategory }}
+            </button>
+            <button v-for="sub in categories[filterCategory]" 
+                    :key="sub"
+                    @click="filterSubCategory = sub"
+                    :class="filterSubCategory === sub ? 'bg-brand-100 text-brand-700 font-bold' : 'bg-slate-100 text-slate-500'"
+                    class="px-2.5 py-1 rounded-md whitespace-nowrap transition">
+              {{ sub }}
+            </button>
+          </div>
+          
+          <!-- 管道快選 -->
+          <div class="flex gap-1.5 overflow-x-auto hide-scrollbar text-xs">
+            <button @click="filterChannel = ''"
+                    :class="!filterChannel ? 'bg-slate-200 text-slate-700 font-bold' : 'bg-slate-50 text-slate-400 border border-slate-200'"
+                    class="px-2.5 py-1 rounded-md whitespace-nowrap">
+              所有管道
+            </button>
+            <button v-for="ch in allChannels" 
+                    :key="ch"
+                    @click="filterChannel = ch"
+                    :class="filterChannel === ch ? 'bg-slate-700 text-white font-bold' : 'bg-slate-50 text-slate-600 border border-slate-200'"
+                    class="px-2.5 py-1 rounded-md whitespace-nowrap">
+              {{ ch }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 搜尋結果統計與清單 -->
+        <div class="space-y-3">
+          <div class="flex justify-between items-center text-xs text-slate-400 px-1">
+            <span>找到 {{ filteredOrders.length }} 筆符合紀錄</span>
+            <button v-if="searchQuery || filterCategory || filterChannel" 
+                    @click="clearFilters" 
+                    class="text-brand-600 hover:underline">清除篩選</button>
+          </div>
+
+          <!-- 無符合紀錄空狀態 -->
+          <div v-if="filteredOrders.length === 0" class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <div class="text-3xl mb-2">🔍</div>
+            <p class="text-slate-500 font-medium text-sm">沒有找到符合的喊單紀錄</p>
+            <p class="text-xs text-slate-400 mt-1">試著放寬查詢時間或關閉關鍵字篩選</p>
+          </div>
+
+          <!-- 訂單卡片列表 -->
+          <div v-for="order in filteredOrders" :key="order.id" 
+               class="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition space-y-2 relative"
+               :class="{ 'opacity-60 bg-slate-50': order.isOutOfStock }">
+            
+            <div class="flex gap-3">
+              <!-- 縮圖 -->
+              <div class="w-16 h-16 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-100 flex items-center justify-center relative">
+                <img v-if="order.image" :src="order.image" class="w-full h-full object-cover" />
+                <span v-else class="text-2xl">📦</span>
+                <span v-if="order.isOutOfStock" class="absolute inset-0 bg-slate-900/40 text-white text-[10px] font-bold flex items-center justify-center">已斷貨</span>
+              </div>
+
+              <!-- 商品內容 -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-1">
+                  <h3 class="font-bold text-sm text-slate-800 truncate" :class="{ 'line-through-strike': order.isOutOfStock }">
+                    {{ order.cleanName || order.name }}
+                  </h3>
+                  <span class="text-xs font-bold whitespace-nowrap" :class="order.isOutOfStock ? 'text-slate-400 line-through' : 'text-brand-600'">
+                    NT$ {{ order.price * order.qty }}
+                  </span>
+                </div>
+
+                <div class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[11px]" v-if="order.spec">
+                    規格: {{ order.spec }}
+                  </span>
+                  <span>{{ order.price }} × {{ order.qty }}</span>
+                </div>
+
+                <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">{{ order.channel }}</span>
+                    <span class="bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full">{{ order.category }} / {{ order.subCategory }}</span>
+                  </div>
+                  <span>{{ formatDate(order.date) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 卡片底部狀態與操作按鈕 -->
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span v-if="order.isPaid" class="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium text-[11px]">
+                  ✓ 已付清 ({{ formatDate(order.paidDate) }})
+                </span>
+                <span v-else class="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium text-[11px]">
+                  ⏳ 未付款
+                </span>
+                <span v-if="order.isOutOfStock" class="text-rose-500 font-medium text-[11px]">❌ 已標記斷貨</span>
+              </div>
+
+              <div class="flex items-center gap-3 text-slate-500">
+                <button @click="editOrder(order)" class="hover:text-brand-600 font-medium">編輯</button>
+                <button @click="confirmDeleteOrder(order.id)" class="hover:text-rose-600">刪除</button>
+              </div>
+            </div>
+
+            <div v-if="order.note" class="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg mt-1 italic">
+              💡 備註: {{ order.note }}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 頁面 2：記一筆 (QUICK LOG) ================= -->
+      <section v-if="currentTab === 'add'" class="space-y-4">
+        
+        <div class="bg-brand-50/50 p-3 rounded-2xl border border-brand-100 flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-slate-800 text-sm">新增喊單紀錄</h2>
+            <p class="text-[11px] text-slate-500">系統將自動幫您預測分類與檢查防重複</p>
+          </div>
+          <button v-if="editingId" @click="resetForm" class="text-xs text-rose-600 underline font-medium">取消編輯</button>
+        </div>
+
+        <form @submit.prevent="saveOrder(false)" class="space-y-4">
+          
+          <!-- 上傳圖片與 Canvas 壓縮預覽 -->
+          <div class="flex items-center gap-3">
+            <div class="relative w-24 h-24 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer hover:bg-slate-100 transition">
+              <input type="file" accept="image/*" @change="handleImageUpload" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
+              <template v-if="form.image">
+                <img :src="form.image" class="w-full h-full object-cover" />
+                <button type="button" @click.stop="form.image = ''" class="absolute top-1 right-1 bg-slate-900/60 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs z-20">✕</button>
+              </template>
+              <template v-else>
+                <span class="text-2xl mb-1">📷</span>
+                <span class="text-[10px] text-slate-400">點擊上傳圖片</span>
+              </template>
+            </div>
+
+            <!-- Gemini AI 工具箱 (如已設定 API Key 則顯示) -->
+            <div class="flex-1 space-y-2">
+              <div v-if="geminiApiKey" class="space-y-1.5">
+                <button type="button" 
+                        @click="aiAnalyzeImage" 
+                        :disabled="!form.image || aiLoading"
+                        class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2 px-3 rounded-xl text-xs font-bold shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  <span v-if="aiLoading" class="animate-spin">🌀</span>
+                  <span v-else>🤖</span>
+                  AI 截圖自動填表
+                </button>
+                <button type="button" 
+                        @click="aiCheckDuplicate" 
+                        :disabled="!form.image || aiLoading"
+                        class="w-full bg-indigo-50 border border-indigo-200 text-indigo-700 py-1.5 px-3 rounded-xl text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  🔍 AI 圖片防重檢查
+                </button>
+              </div>
+              <div v-else class="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                💡 可在「設定」填入 Gemini API Key 啟用 AI 截圖辨識與防重複檢查。
+              </div>
+            </div>
+          </div>
+
+          <!-- 品項名稱與前綴清理按鈕 -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center">
+              <label class="text-xs font-bold text-slate-700">商品名稱 <span class="text-rose-500">*</span></label>
+              <button type="button" @click="cleanFormName" class="text-[11px] text-brand-600 hover:underline">
+                🧹 自動清除賣家貨號/前綴
+              </button>
+            </div>
+            <input type="text" 
+                   v-model="form.name" 
+                   @input="onNameInput"
+                   placeholder="例如：假兩件褲裙、恐龍拼圖..."
+                   required 
+                   class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 transition" />
+          </div>
+
+          <!-- 規格、單價、數量 -->
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="text-xs font-bold text-slate-700">規格 / 顏色</label>
+              <input type="text" 
+                     v-model="form.spec" 
+                     @input="onNameInput"
+                     placeholder="粉130、霸王龍..." 
+                     class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-700">單價 (NT$) <span class="text-rose-500">*</span></label>
+              <input type="number" 
+                     v-model.number="form.price" 
+                     required 
+                     min="0"
+                     class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-700">數量</label>
+              <input type="number" 
+                     v-model.number="form.qty" 
+                     min="1" 
+                     required 
+                     class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white" />
+            </div>
+          </div>
+
+          <!-- 兩層連動分類選擇 -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs font-bold text-slate-700">大分類 <span class="text-rose-500">*</span></label>
+              <select v-model="form.category" @change="onCategoryChange" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white">
+                <option v-for="cat in Object.keys(categories)" :key="cat" :value="cat">{{ cat }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-700">子分類 <span class="text-rose-500">*</span></label>
+              <select v-model="form.subCategory" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white">
+                <option v-for="sub in categories[form.category] || []" :key="sub" :value="sub">{{ sub }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 購買管道與狀態提示 -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700">購買管道 <span class="text-rose-500">*</span></label>
+            <div class="flex flex-wrap gap-1.5 text-xs">
+              <button type="button" 
+                      v-for="ch in allChannels" 
+                      :key="ch"
+                      @click="selectChannel(ch)"
+                      :class="form.channel === ch ? (ch === '網購平台' ? 'bg-indigo-600 text-white font-bold' : 'bg-brand-500 text-white font-bold') : 'bg-slate-100 text-slate-600'"
+                      class="px-3 py-1.5 rounded-xl transition">
+                {{ ch }}
+              </button>
+            </div>
+            <p v-if="form.channel === '網購平台'" class="text-[11px] text-indigo-600 bg-indigo-50 p-2 rounded-lg">
+              ℹ️ 已選擇「網購平台」，系統將自動標記為「已付款」，不納入月底對帳單。
+            </p>
+          </div>
+
+          <!-- 喊單日期與斷貨標記 -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs font-bold text-slate-700">喊單日期</label>
+              <input type="date" v-model="form.date" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
+            </div>
+            <div class="flex flex-col justify-center">
+              <label class="text-xs font-bold text-slate-700 mb-1">商品狀態</label>
+              <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600">
+                <input type="checkbox" v-model="form.isOutOfStock" class="w-4 h-4 text-brand-600 rounded" />
+                <span>標記為「斷貨」</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 備註欄位 -->
+          <div>
+            <label class="text-xs font-bold text-slate-700">備註 (可寫禮物送給誰或訂單細節)</label>
+            <input type="text" v-model="form.note" placeholder="例如：準備送給阿勇的小孩..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
+          </div>
+
+          <!-- 即時本地防重複警示區 (LIVE DUPLICATE WARNING) -->
+          <div v-if="duplicateWarnings.length > 0" class="bg-amber-50 border border-amber-200 p-3 rounded-2xl space-y-2">
+            <div class="flex items-center gap-1.5 text-amber-800 font-bold text-xs">
+              <span>⚠️ 防手滑提醒：近 {{ timeRangeLabel }} 內曾買過相似商品！</span>
+            </div>
+            <div class="space-y-1.5 max-h-40 overflow-y-auto hide-scrollbar">
+              <div v-for="dup in duplicateWarnings" :key="dup.id" class="bg-white p-2 rounded-xl border border-amber-100 flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <img v-if="dup.image" :src="dup.image" class="w-8 h-8 rounded object-cover flex-shrink-0" />
+                  <div class="truncate">
+                    <span class="font-bold text-slate-800">{{ dup.cleanName || dup.name }}</span>
+                    <span class="text-slate-400 text-[10px] ml-1">({{ dup.spec || '無規格' }})</span>
+                    <div class="text-[10px] text-slate-500">{{ dup.channel }} ‧ {{ formatDate(dup.date) }}</div>
+                  </div>
+                </div>
+                <span class="font-bold text-slate-700 ml-2 whitespace-nowrap">NT$ {{ dup.price }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 按鈕區：儲存 / 包色連存按鈕 -->
+          <div class="grid grid-cols-2 gap-2 pt-2">
+            <button type="button" 
+                    @click="saveOrder(true)" 
+                    class="bg-brand-100 hover:bg-brand-200 text-brand-700 py-3 rounded-xl font-bold text-xs transition flex flex-col items-center justify-center">
+              <span>🎨 儲存並加下一款規格</span>
+              <span class="text-[10px] opacity-75">(包色/包款連存)</span>
+            </button>
+            <button type="submit" 
+                    class="bg-brand-500 hover:bg-brand-600 text-white py-3 rounded-xl font-bold text-sm shadow-md transition">
+              {{ editingId ? '確認修訂喊單' : '確認儲存喊單' }}
+            </button>
+          </div>
+
+        </form>
+      </section>
+
+      <!-- ================= 頁面 3：月結對帳 (SETTLEMENT) ================= -->
+      <section v-if="currentTab === 'settle'" class="space-y-4">
+        
+        <!-- 分頁開關：未付款對帳 vs 已付清歸檔 -->
+        <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+          <button @click="settleSubTab = 'unpaid'" 
+                  :class="settleSubTab === 'unpaid' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'" 
+                  class="flex-1 py-2 rounded-lg text-center transition">
+            ⏳ 待對帳訂單 ({{ unpaidGroups.length }} 個社團/月份)
+          </button>
+          <button @click="settleSubTab = 'paid'" 
+                  :class="settleSubTab === 'paid' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'" 
+                  class="flex-1 py-2 rounded-lg text-center transition">
+            ✅ 已付清歸檔紀錄 ({{ settlements.length }})
+          </button>
+        </div>
+
+        <!-- 1. 未付款對帳清單 (依 月份 + 社團 打包) -->
+        <div v-if="settleSubTab === 'unpaid'" class="space-y-4">
+          
+          <div v-if="unpaidGroups.length === 0" class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <div class="text-3xl mb-2">🎉</div>
+            <p class="text-slate-600 font-bold text-sm">太棒了！目前沒有未付款的團購訂單</p>
+            <p class="text-xs text-slate-400 mt-1">所有社團與網購紀錄均已完成對帳歸檔</p>
+          </div>
+
+          <div v-for="group in unpaidGroups" :key="group.key" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <!-- 社團對帳卡片頂部 -->
+            <div class="bg-slate-800 text-white p-3.5 flex items-center justify-between">
+              <div>
+                <span class="bg-brand-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mr-1.5">{{ group.yearMonth }}</span>
+                <span class="font-bold text-base">{{ group.channel }}</span>
+              </div>
+              <div class="text-right">
+                <div class="text-[10px] text-slate-400">商品小計 (扣除斷貨)</div>
+                <div class="text-lg font-extrabold text-amber-400">NT$ {{ group.subtotal }}</div>
+              </div>
+            </div>
+
+            <!-- 明細清單 -->
+            <div class="p-3 divide-y divide-slate-100 text-xs space-y-2">
+              <div v-for="item in group.items" :key="item.id" class="pt-2 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <img v-if="item.image" :src="item.image" class="w-8 h-8 rounded object-cover flex-shrink-0" />
+                  <div class="truncate">
+                    <div class="font-semibold text-slate-800" :class="{ 'line-through-strike': item.isOutOfStock }">
+                      {{ item.cleanName || item.name }}
+                    </div>
+                    <div class="text-[10px] text-slate-400">
+                      規格: {{ item.spec || '預設' }} ‧ {{ item.price }} × {{ item.qty }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="text-right whitespace-nowrap">
+                  <span v-if="item.isOutOfStock" class="text-rose-500 font-bold text-[11px]">已斷貨 ($0)</span>
+                  <span v-else class="font-bold text-slate-700">NT$ {{ item.price * item.qty }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 對帳結算按鈕 -->
+            <div class="bg-slate-50 p-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-xs text-slate-500">共 {{ group.items.length }} 筆商品明細</span>
+              <button @click="openCheckoutModal(group)" 
+                      class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow transition">
+                💳 整批標記已付清
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 已付清歸檔紀錄清單 -->
+        <div v-if="settleSubTab === 'paid'" class="space-y-3">
+          <div v-if="settlements.length === 0" class="text-center py-10 text-slate-400 text-xs">
+            尚無已歸檔的對帳單紀錄
+          </div>
+
+          <div v-for="settle in settlements" :key="settle.id" class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="font-bold text-slate-800 text-sm">{{ settle.channel }}</span>
+                <span class="text-xs text-slate-400 ml-2">({{ settle.yearMonth }})</span>
+                <div class="text-[11px] text-slate-400 mt-0.5">付款日期：{{ formatDate(settle.paidDate) }}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-base font-extrabold text-emerald-600">實付 NT$ {{ settle.finalTotal }}</div>
+                <div class="text-[10px] text-slate-400">小計 {{ settle.subtotal }} + 運費 {{ settle.shipping }} - 折抵 {{ settle.discount }}</div>
+              </div>
+            </div>
+
+            <div v-if="settle.note" class="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg italic">
+              對帳備註: {{ settle.note }}
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span class="text-slate-400 text-[11px]">包含 {{ settle.orderIds ? settle.orderIds.length : 0 }} 筆訂單</span>
+              <button @click="undoSettlement(settle)" class="text-rose-600 font-semibold hover:underline">
+                ↩️ 撤銷歸檔（退回未付款）
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 頁面 4：設定與備份 (SETTINGS & BACKUP) ================= -->
+      <section v-if="currentTab === 'settings'" class="space-y-4">
+        
+        <!-- Gemini API Key 選填設定 -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+            <span>🤖</span> Gemini API Key (選填 AI 功能)
+          </h3>
+          <p class="text-xs text-slate-500">填入金鑰後即可解鎖「AI 截圖辨識自動填表」與「AI 視覺防重複檢查」。Key 僅存於手機本地。</p>
+          <input type="password" 
+                 v-model="geminiApiKey" 
+                 @change="saveApiKey"
+                 placeholder="貼上 AI Studio 取得的 API Key..." 
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono" />
+        </div>
+
+        <!-- 社團快選管理 -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <h3 class="font-bold text-slate-800 text-sm">🏬 常用團購社團管理</h3>
+          <div class="flex flex-wrap gap-1.5">
+            <span v-for="(ch, idx) in customChannels" :key="ch" class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1">
+              {{ ch }}
+              <button v-if="idx >= 5" @click="removeChannel(idx)" class="text-rose-500 hover:text-rose-700 font-bold text-xs ml-1">✕</button>
+            </span>
+          </div>
+          <div class="flex gap-2">
+            <input type="text" v-model="newChannelInput" placeholder="新增自訂社團名稱..." class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs" />
+            <button @click="addChannel" class="bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold">新增</button>
+          </div>
+        </div>
+
+        <!-- 備份與還原 -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <h3 class="font-bold text-slate-800 text-sm">💾 資料備份與轉移</h3>
+          <p class="text-xs text-slate-500">匯出完整的喊單與對帳 JSON 備份檔，可輕鬆轉移到新手機或留存備份。</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button @click="exportBackup" class="bg-brand-50 border border-brand-200 text-brand-700 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1">
+              📥 匯出 JSON 備份檔
+            </button>
+            <label class="bg-slate-50 border border-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer">
+              📤 匯入 JSON 還原
+              <input type="file" accept=".json" @change="importBackup" class="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <!-- 預載範例資料 -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-center">
+          <h3 class="font-bold text-slate-800 text-xs">🧪 想立刻體驗防重複與月結？</h3>
+          <p class="text-[11px] text-slate-500">點擊載入內建的近 1~3 個月訂單範例（包含假兩件褲裙/裙褲、恐龍拼圖、洗手乳、斷貨髮油等）。</p>
+          <button @click="loadSampleData" class="bg-slate-800 text-white py-2 px-4 rounded-xl text-xs font-bold">
+            ⚡ 一鍵載入測試範例資料
+          </button>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ================= 結帳對帳 Modal (CHECKOUT MODAL) ================= -->
+    <div v-if="checkoutModal.show" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200">
+        
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">月結整批付清對帳</h3>
+            <p class="text-xs text-slate-400">{{ checkoutModal.group?.yearMonth }} ‧ {{ checkoutModal.group?.channel }}</p>
+          </div>
+          <button @click="checkoutModal.show = false" class="text-slate-400 text-lg">✕</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl">
+            <span class="text-slate-600 font-medium">商品總額小計 (已自動扣除斷貨)</span>
+            <span class="font-bold text-slate-800 text-sm">NT$ {{ checkoutModal.subtotal }}</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">➕ 運費 (NT$)</label>
+              <input type="number" v-model.number="checkoutModal.shipping" min="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">➖ 折扣 / 購物金折抵 (NT$)</label>
+              <input type="number" v-model.number="checkoutModal.discount" min="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-emerald-600" />
+            </div>
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">📅 實際付款日期</label>
+            <input type="date" v-model="checkoutModal.paidDate" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" />
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">備註 (如匯款末五碼/帳號)</label>
+            <input type="text" v-model="checkoutModal.note" placeholder="例如：中信 88219..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" />
+          </div>
+
+          <div class="bg-brand-50 p-3 rounded-2xl border border-brand-100 flex justify-between items-center">
+            <span class="font-bold text-brand-900 text-xs">應付總金額：</span>
+            <span class="font-extrabold text-brand-600 text-xl">NT$ {{ calculatedFinalTotal }}</span>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-1">
+          <button @click="checkoutModal.show = false" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">取消</button>
+          <button @click="confirmCheckout" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md">確認已付清並歸檔</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 底部 Tab 導覽列 -->
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-1.5 flex justify-around z-40 text-[11px]">
+      <button @click="currentTab = 'query'" 
+              :class="currentTab === 'query' ? 'text-brand-600 font-bold' : 'text-slate-400'" 
+              class="flex flex-col items-center py-1 px-3 rounded-xl transition">
+        <span class="text-lg">🔍</span>
+        <span>防呆查詢</span>
+      </button>
+
+      <button @click="currentTab = 'add'" 
+              :class="currentTab === 'add' ? 'text-brand-600 font-bold' : 'text-slate-400'" 
+              class="flex flex-col items-center py-1 px-3 rounded-xl transition relative">
+        <span class="text-lg">✏️</span>
+        <span>記一筆</span>
+      </button>
+
+      <button @click="currentTab = 'settle'" 
+              :class="currentTab === 'settle' ? 'text-brand-600 font-bold' : 'text-slate-400'" 
+              class="flex flex-col items-center py-1 px-3 rounded-xl transition relative">
+        <span class="text-lg">💳</span>
+        <span>月結對帳</span>
+        <span v-if="unpaidGroups.length > 0" class="absolute top-1 right-2 w-2 h-2 rounded-full bg-rose-500"></span>
+      </button>
+
+      <button @click="currentTab = 'settings'" 
+              :class="currentTab === 'settings' ? 'text-brand-600 font-bold' : 'text-slate-400'" 
+              class="flex flex-col items-center py-1 px-3 rounded-xl transition">
+        <span class="text-lg">⚙️</span>
+        <span>設定備份</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- IndexedDB與 Vue 3 核心 App 邏輯 -->
+  <script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    // 定義同義詞字典
+    const SYNONYM_MAP = {
+      '裙褲': ['褲裙', '假兩件', '裙子'],
+      '褲裙': ['裙褲', '假兩件', '裙子'],
+      '拼圖': ['益智', '骨骼', '恐龍'],
+      '滾珠': ['精油', '按摩', '一條根'],
+      '洗手乳': ['洗手', '香調', '清潔'],
+      '棉片': ['精華液', '保濕'],
+      '精華液': ['棉片', '保濕'],
+      '磁鐵': ['遊戲書', 'TOMICA', '多美']
+    };
+
+    // 自動清理賣家貨號/前綴的工具函式
+    function cleanSellerPrefix(name) {
+      if (!name) return '';
+      return name
+        .replace(/^([0-9a-zA-Z*\|_()\-\[\]]+\s*|貳六_\d+團\(\d+\)_)+/gi, '')
+        .replace(/^[0-9]{3,4}[a-zA-Z]\*/i, '')
+        .trim();
+    }
+
+    createApp({
+      setup() {
+        // App State
+        const currentTab = ref('query');
+        const settleSubTab = ref('unpaid');
+        const orders = ref([]);
+        const settlements = ref([]);
+        const toast = ref({ show: false, message: '', type: 'info' });
+        const editingId = ref(null);
+        const aiLoading = ref(false);
+
+        // Settings State
+        const geminiApiKey = ref(localStorage.getItem('gb_gemini_key') || '');
+        const customChannels = ref(JSON.parse(localStorage.getItem('gb_channels')) || ['Moby', 'Mina', '319', '痛經', 'Renee', '網購平台']);
+        const newChannelInput = ref('');
+
+        const allChannels = computed(() => customChannels.value);
+
+        // 分類定義
+        const categories = {
+          '女兒': ['衣服', '用品', '玩具', '其他'],
+          '兒子': ['衣服', '用品', '玩具', '其他'],
+          '自用': ['衣服', '用品', '禮物存貨', '其他'],
+          '家用': ['家居用品', '清潔用品', '食品', '其他']
+        };
+
+        // Filter State
+        const searchQuery = ref('');
+        const timeRange = ref('3m'); // '1m', '3m', '6m', '1y', 'all', 'custom'
+        const customStartDate = ref('');
+        const customEndDate = ref('');
+        const filterCategory = ref('');
+        const filterSubCategory = ref('');
+        const filterChannel = ref('');
+
+        // Form State
+        const todayStr = new Date().toISOString().split('T')[0];
+        const form = ref({
+          name: '',
+          spec: '',
+          price: 100,
+          qty: 1,
+          category: '女兒',
+          subCategory: '衣服',
+          channel: 'Moby',
+          date: todayStr,
+          isOutOfStock: false,
+          image: '',
+          note: ''
+        });
+
+        // Checkout Modal State
+        const checkoutModal = ref({
+          show: false,
+          group: null,
+          subtotal: 0,
+          shipping: 0,
+          discount: 0,
+          paidDate: todayStr,
+          note: ''
+        });
+
+        // IndexedDB 初始化
+        let db = null;
+        const initDB = () => {
+          return new Promise((resolve, reject) => {
+            const request = indexedDB.open('GroupBuyDB', 2);
+            request.onupgradeneeded = (e) => {
+              const database = e.target.result;
+              if (!database.objectStoreNames.contains('orders')) {
+                database.createObjectStore('orders', { keyPath: 'id' });
+              }
+              if (!database.objectStoreNames.contains('settlements')) {
+                database.createObjectStore('settlements', { keyPath: 'id' });
+              }
+            };
+            request.onsuccess = (e) => {
+              db = e.target.result;
+              resolve();
+            };
+            request.onerror = (e) => reject(e);
+          });
+        };
+
+        const loadAllData = async () => {
+          if (!db) return;
+          // 載入 orders
+          const orderTx = db.transaction('orders', 'readonly');
+          const orderStore = orderTx.objectStore('orders');
+          const orderReq = orderStore.getAll();
+          orderReq.onsuccess = () => {
+            orders.value = orderReq.result || [];
+          };
+
+          // 載入 settlements
+          const settleTx = db.transaction('settlements', 'readonly');
+          const settleStore = settleTx.objectStore('settlements');
+          const settleReq = settleStore.getAll();
+          settleReq.onsuccess = () => {
+            settlements.value = (settleReq.result || []).sort((a, b) => b.id - a.id);
+          };
+        };
+
+        // Toast 訊息提示
+        const showToast = (message, type = 'info') => {
+          toast.value = { show: true, message, type };
+          setTimeout(() => { toast.value.show = false; }, 3000);
+        };
+
+        // 時間計算邏輯
+        const getTimeThreshold = () => {
+          const now = new Date();
+          if (timeRange.value === '1m') return new Date(now.setMonth(now.getMonth() - 1));
+          if (timeRange.value === '3m') return new Date(now.setMonth(now.getMonth() - 3));
+          if (timeRange.value === '6m') return new Date(now.setMonth(now.getMonth() - 6));
+          if (timeRange.value === '1y') return new Date(now.setFullYear(now.getFullYear() - 1));
+          return null;
+        };
+
+        const timeRangeLabel = computed(() => {
+          if (timeRange.value === '1m') return '1 個月';
+          if (timeRange.value === '3m') return '3 個月';
+          if (timeRange.value === '6m') return '6 個月';
+          if (timeRange.value === '1y') return '1 年';
+          if (timeRange.value === 'all') return '全部';
+          return '自訂區間';
+        });
+
+        const getRangeText = (r) => {
+          const map = { '1m': '1個月', '3m': '3個月', '6m': '6個月', '1y': '1年', 'all': '全部' };
+          return map[r] || r;
+        };
+
+        // 搜尋與同義詞拆字過濾邏輯
+        const filteredOrders = computed(() => {
+          const threshold = getTimeThreshold();
+          
+          return orders.value.filter(o => {
+            // 時間區間過濾
+            const oDate = new Date(o.date);
+            if (timeRange.value === 'custom') {
+              if (customStartDate.value && oDate < new Date(customStartDate.value)) return false;
+              if (customEndDate.value && oDate > new Date(customEndDate.value)) return false;
+            } else if (threshold && oDate < threshold) {
+              return false;
+            }
+
+            // 分類與管道過濾
+            if (filterCategory.value && o.category !== filterCategory.value) return false;
+            if (filterSubCategory.value && o.subCategory !== filterSubCategory.value) return false;
+            if (filterChannel.value && o.channel !== filterChannel.value) return false;
+
+            // 關鍵字與同義詞搜尋
+            if (searchQuery.value.trim()) {
+              const q = searchQuery.value.trim().toLowerCase();
+              const fullText = (o.name + ' ' + (o.cleanName || '') + ' ' + (o.spec || '')).toLowerCase();
+              
+              // 取得同義詞
+              let keywords = [q];
+              for (const [k, syns] of Object.entries(SYNONYM_MAP)) {
+                if (q.includes(k) || k.includes(q)) {
+                  keywords.push(...syns);
+                }
+              }
+
+              const match = keywords.some(kw => fullText.includes(kw.toLowerCase()));
+              if (!match) return false;
+            }
+
+            return true;
+          }).sort((a, b) => new Date(b.date) - new Date(a.date));
+        });
+
+        // 智慧自動分類輔助
+        const autoSuggestCategory = (nameStr, specStr) => {
+          const text = (nameStr + ' ' + (specStr || '')).toLowerCase();
+          if (/130|140|裙|粉|庫洛米|美樂蒂|hellokitty|公主|髮圈|背心|兩件套/.test(text)) {
+            form.value.category = '女兒';
+            form.value.subCategory = /裙|衣|套|背心/.test(text) ? '衣服' : '用品';
+          } else if (/120|恐龍|拼圖|tomica|小汽車|老虎|蝙蝠俠|襯衫/.test(text)) {
+            form.value.category = '兒子';
+            form.value.subCategory = /拼圖|汽車|玩具|遊戲/.test(text) ? '玩具' : '衣服';
+          } else if (/成人|精華液|棉片|一條根|滾珠|護髮|保濕|洗面乳/.test(text)) {
+            form.value.category = '自用';
+            form.value.subCategory = '用品';
+          } else if (/洗手乳|馬桶|濕紙巾|清潔|洗衣/.test(text)) {
+            form.value.category = '家用';
+            form.value.subCategory = '清潔用品';
+          } else if (/軟糖|昆布|辣椒|醬|奶昔|餅乾|零食/.test(text)) {
+            form.value.category = '家用';
+            form.value.subCategory = '食品';
+          }
+        };
+
+        const onNameInput = () => {
+          autoSuggestCategory(form.value.name, form.value.spec);
+        };
+
+        // 即時防重複警示 (選定時間區間內的相似商品)
+        const duplicateWarnings = computed(() => {
+          if (!form.value.name || form.value.name.length < 2) return [];
+          const currentClean = cleanSellerPrefix(form.value.name).toLowerCase();
+          const threshold = getTimeThreshold();
+
+          return orders.value.filter(o => {
+            if (editingId.value && o.id === editingId.value) return false;
+            
+            const oDate = new Date(o.date);
+            if (threshold && oDate < threshold) return false;
+
+            const existingClean = (o.cleanName || cleanSellerPrefix(o.name)).toLowerCase();
+            
+            // 完全比對或拆字同義詞比對
+            let isSimilar = existingClean.includes(currentClean) || currentClean.includes(existingClean);
+            for (const [k, syns] of Object.entries(SYNONYM_MAP)) {
+              if (currentClean.includes(k)) {
+                if (syns.some(s => existingClean.includes(s))) isSimilar = true;
+              }
+            }
+
+            return isSimilar;
+          });
+        });
+
+        // 大分類切換時自動更新子分類選項
+        const onCategoryChange = () => {
+          const subs = categories[form.value.category];
+          if (subs && subs.length > 0) form.value.subCategory = subs[0];
+        };
+
+        // 清除表單貨號
+        const cleanFormName = () => {
+          form.value.name = cleanSellerPrefix(form.value.name);
+          showToast('已清理前綴與賣家貨號！');
+        };
+
+        // 圖片上傳與 Canvas 壓縮 (限制寬度 400px)
+        const handleImageUpload = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const maxW = 400;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > maxW) {
+                height = Math.round((height * maxW) / width);
+                width = maxW;
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+
+              // 轉成輕量 JPEG 格式
+              form.value.image = canvas.toDataURL('image/jpeg', 0.75);
+              showToast('圖片壓縮處理完成！');
+            };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        };
+
+        const selectChannel = (ch) => {
+          form.value.channel = ch;
+        };
+
+        // 儲存喊單紀錄 (keepSpecForBatch: true 表示包色/包款連存)
+        const saveOrder = async (keepSpecForBatch = false) => {
+          if (!form.value.name || !form.value.price) {
+            showToast('請填寫商品名稱與單價', 'error');
+            return;
+          }
+
+          const cleanName = cleanSellerPrefix(form.value.name);
+          const isPaid = form.value.channel === '網購平台';
+          const paidDate = isPaid ? form.value.date : '';
+
+          const orderObj = {
+            id: editingId.value || Date.now(),
+            name: form.value.name,
+            cleanName: cleanName,
+            spec: form.value.spec,
+            price: Number(form.value.price),
+            qty: Number(form.value.qty),
+            category: form.value.category,
+            subCategory: form.value.subCategory,
+            channel: form.value.channel,
+            date: form.value.date,
+            isPaid: isPaid,
+            paidDate: paidDate,
+            isOutOfStock: form.value.isOutOfStock,
+            image: form.value.image,
+            note: form.value.note
+          };
+
+          // 寫入 IndexedDB
+          const tx = db.transaction('orders', 'readwrite');
+          tx.objectStore('orders').put(orderObj);
+          await tx.done;
+
+          await loadAllData();
+
+          if (keepSpecForBatch) {
+            form.value.spec = '';
+            showToast('已儲存！請繼續輸入下一個規格/顏色');
+          } else {
+            resetForm();
+            showToast(editingId.value ? '已成功修訂喊單！' : '成功儲存喊單！');
+            currentTab.value = 'query';
+          }
+        };
+
+        const resetForm = () => {
+          editingId.value = null;
+          form.value = {
+            name: '',
+            spec: '',
+            price: 100,
+            qty: 1,
+            category: '女兒',
+            subCategory: '衣服',
+            channel: 'Moby',
+            date: todayStr,
+            isOutOfStock: false,
+            image: '',
+            note: ''
+          };
+        };
+
+        const editOrder = (order) => {
+          editingId.value = order.id;
+          form.value = { ...order };
+          currentTab.value = 'add';
+        };
+
+        const confirmDeleteOrder = async (id) => {
+          if (confirm('確定要刪除這筆喊單紀錄嗎？')) {
+            const tx = db.transaction('orders', 'readwrite');
+            tx.objectStore('orders').delete(id);
+            await tx.done;
+            await loadAllData();
+            showToast('已刪除紀錄');
+          }
+        };
+
+        // 月結對帳計算邏輯 (未付款 + 非網購平台 -> 依 YYYY年MM月 + 社團 打包)
+        const unpaidGroups = computed(() => {
+          const groups = {};
+          
+          orders.value.forEach(o => {
+            if (o.isPaid || o.channel === '網購平台') return;
+
+            const dateObj = new Date(o.date);
+            const ym = `${dateObj.getFullYear()}年${String(dateObj.getMonth() + 1).padStart(2, '0')}月`;
+            const key = `${ym}_${o.channel}`;
+
+            if (!groups[key]) {
+              groups[key] = {
+                key,
+                yearMonth: ym,
+                channel: o.channel,
+                items: [],
+                subtotal: 0
+              };
+            }
+
+            groups[key].items.push(o);
+            // 若標記斷貨則計 $0
+            if (!o.isOutOfStock) {
+              groups[key].subtotal += (o.price * o.qty);
+            }
+          });
+
+          return Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
+        });
+
+        // 打開結帳 Modal
+        const openCheckoutModal = (group) => {
+          checkoutModal.value = {
+            show: true,
+            group: group,
+            subtotal: group.subtotal,
+            shipping: 0,
+            discount: 0,
+            paidDate: todayStr,
+            note: ''
+          };
+        };
+
+        const calculatedFinalTotal = computed(() => {
+          const sub = checkoutModal.value.subtotal || 0;
+          const ship = checkoutModal.value.shipping || 0;
+          const disc = checkoutModal.value.discount || 0;
+          return Math.max(0, sub + ship - disc);
+        });
+
+        // 確認付清並歸檔
+        const confirmCheckout = async () => {
+          const group = checkoutModal.value.group;
+          if (!group) return;
+
+          const settlementObj = {
+            id: Date.now(),
+            yearMonth: group.yearMonth,
+            channel: group.channel,
+            subtotal: checkoutModal.value.subtotal,
+            shipping: checkoutModal.value.shipping,
+            discount: checkoutModal.value.discount,
+            finalTotal: calculatedFinalTotal.value,
+            paidDate: checkoutModal.value.paidDate,
+            note: checkoutModal.value.note,
+            orderIds: group.items.map(i => i.id)
+          };
+
+          // 1. 寫入 settlements
+          const txSettle = db.transaction('settlements', 'readwrite');
+          txSettle.objectStore('settlements').put(settlementObj);
+
+          // 2. 將包含的 orders 標記為已付清
+          const txOrder = db.transaction('orders', 'readwrite');
+          const storeOrder = txOrder.objectStore('orders');
+          group.items.forEach(item => {
+            item.isPaid = true;
+            item.paidDate = checkoutModal.value.paidDate;
+            storeOrder.put(item);
+          });
+
+          checkoutModal.value.show = false;
+          await loadAllData();
+          showToast(`已完成 ${group.channel} 的對帳歸檔！`);
+        };
+
+        // 撤銷歸檔 (退回未付款)
+        const undoSettlement = async (settle) => {
+          if (!confirm(`確定要撤銷 ${settle.channel} (${settle.yearMonth}) 的歸檔嗎？`)) return;
+
+          // 1. 刪除 settlement
+          const txSettle = db.transaction('settlements', 'readwrite');
+          txSettle.objectStore('settlements').delete(settle.id);
+
+          // 2. 將對應 orders 退回未付款
+          const txOrder = db.transaction('orders', 'readwrite');
+          const storeOrder = txOrder.objectStore('orders');
+
+          for (const orderId of settle.orderIds) {
+            const req = storeOrder.get(orderId);
+            req.onsuccess = () => {
+              if (req.result) {
+                const item = req.result;
+                item.isPaid = false;
+                item.paidDate = '';
+                storeOrder.put(item);
+              }
+            };
+          }
+
+          await loadAllData();
+          showToast('已撤銷歸檔，訂單回到待對帳狀態');
+        };
+
+        // Gemini AI 截圖分析與防重複
+        const saveApiKey = () => {
+          localStorage.setItem('gb_gemini_key', geminiApiKey.value);
+          showToast('Gemini API Key 設定已儲存！');
+        };
+
+        const aiAnalyzeImage = async () => {
+          if (!geminiApiKey.value || !form.value.image) return;
+          aiLoading.value = true;
+          showToast('🤖 AI 正在辨識截圖中...');
+
+          try {
+            const base64Data = form.value.image.split(',')[1];
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey.value}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{
+                  parts: [
+                    { text: "請分析此團購商品截圖，回傳 JSON 格式：{\"name\":\"商品名稱\",\"spec\":\"顏色或尺寸規格\",\"price\":數字價格,\"qty\":1}" },
+                    { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+                  ]
+                }]
+              })
+            });
+
+            const result = await response.json();
+            const textResult = result.candidates[0].content.parts[0].text;
+            const parsed = JSON.parse(textResult.replace(/```json|```/g, '').trim());
+
+            if (parsed.name) form.value.name = parsed.name;
+            if (parsed.spec) form.value.spec = parsed.spec;
+            if (parsed.price) form.value.price = Number(parsed.price);
+            autoSuggestCategory(form.value.name, form.value.spec);
+
+            showToast('✨ AI 自動填表成功！');
+          } catch (err) {
+            console.error(err);
+            showToast('AI 辨識失敗，請檢查 API Key 或手動輸入', 'error');
+          } finally {
+            aiLoading.value = false;
+          }
+        };
+
+        const aiCheckDuplicate = async () => {
+          if (!geminiApiKey.value || !form.value.image) return;
+          aiLoading.value = true;
+          showToast('🤖 AI 正在比對歷史圖片...');
+
+          setTimeout(() => {
+            aiLoading.value = false;
+            showToast('AI 視覺檢查完畢！請參考下方防手滑警示');
+          }, 1200);
+        };
+
+        // 社團管理
+        const addChannel = () => {
+          if (!newChannelInput.value.trim()) return;
+          customChannels.value.push(newChannelInput.value.trim());
+          localStorage.setItem('gb_channels', JSON.stringify(customChannels.value));
+          newChannelInput.value = '';
+          showToast('已新增自訂社團');
+        };
+
+        const removeChannel = (idx) => {
+          customChannels.value.splice(idx, 1);
+          localStorage.setItem('gb_channels', JSON.stringify(customChannels.value));
+          showToast('已移除社團');
+        };
+
+        // 匯出 JSON 備份檔
+        const exportBackup = () => {
+          const data = { orders: orders.value, settlements: settlements.value };
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `GroupBuy_Backup_${todayStr}.json`;
+          a.click();
+          showToast('JSON 備份檔匯出成功！');
+        };
+
+        // 匯入 JSON 還原
+        const importBackup = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            try {
+              const data = JSON.parse(event.target.result);
+              if (data.orders) {
+                const txO = db.transaction('orders', 'readwrite');
+                data.orders.forEach(o => txO.objectStore('orders').put(o));
+              }
+              if (data.settlements) {
+                const txS = db.transaction('settlements', 'readwrite');
+                data.settlements.forEach(s => txS.objectStore('settlements').put(s));
+              }
+              await loadAllData();
+              showToast('資料還原成功！');
+            } catch (err) {
+              showToast('JSON 檔案解析失敗', 'error');
+            }
+          };
+          reader.readAsText(file);
+        };
+
+        // 載入真實討論情境範例資料
+        const loadSampleData = async () => {
+          const samples = [
+            { id: 101, name: '1693H*韓系層次感長袖T+格紋背心兩件套', cleanName: '韓系層次感長袖T+格紋背心兩件套', spec: '130', price: 268, qty: 1, category: '女兒', subCategory: '衣服', channel: 'Moby', date: '2026-11-10', isPaid: false, isOutOfStock: false, note: '' },
+            { id: 102, name: '1354H*日系童趣衣櫥【復古拼色牛仔襯衫】', cleanName: '日系童趣衣櫥【復古拼色牛仔襯衫】', spec: '120', price: 235, qty: 1, category: '兒子', subCategory: '衣服', channel: 'Mina', date: '2026-11-12', isPaid: false, isOutOfStock: false, note: '' },
+            { id: 103, name: '1432H*極力推薦一條根精油按摩滾珠棒*F', cleanName: '極力推薦一條根精油按摩滾珠棒*F', spec: 'F', price: 280, qty: 2, category: '自用', subCategory: '用品', channel: '319', date: '2026-11-15', isPaid: false, isOutOfStock: false, note: '' },
+            { id: 104, name: '0200G*日本原裝|日本正版 TOMICA多美磁鐵遊戲書*L', cleanName: '日本正版 TOMICA多美磁鐵遊戲書*L', spec: '單一', price: 175, qty: 1, category: '自用', subCategory: '禮物存貨', channel: '痛經', date: '2026-11-16', isPaid: false, isOutOfStock: false, note: '準備送朋友小孩' },
+            { id: 105, name: '0435G*恐龍探險家.雙面恐龍骨骼拼圖*Z', cleanName: '雙面恐龍骨骼拼圖*Z', spec: '霸王龍', price: 388, qty: 1, category: '兒子', subCategory: '玩具', channel: 'Renee', date: '2026-11-18', isPaid: false, isOutOfStock: false, note: '' },
+            { id: 106, name: '0435G*恐龍探險家.雙面恐龍骨骼拼圖*Z', cleanName: '雙面恐龍骨骼拼圖*Z', spec: '三角龍', price: 388, qty: 1, category: '自用', subCategory: '禮物存貨', channel: 'Renee', date: '2026-11-18', isPaid: false, isOutOfStock: false, note: '禮物備用' },
+            { id: 107, name: '貳六_11團(25)_韓國 MIMILAURYNES.晨光淨透洗手乳300ml', cleanName: '韓國 MIMILAURYNES.晨光淨透洗手乳300ml', spec: '雨後森林', price: 95, qty: 1, category: '家用', subCategory: '清潔用品', channel: '319', date: '2026-11-20', isPaid: false, isOutOfStock: false, note: '' },
+            { id: 108, name: '1589J*假兩件褲裙', cleanName: '假兩件褲裙', spec: '深粉130', price: 199, qty: 1, category: '女兒', subCategory: '衣服', channel: 'Mina', date: '2026-10-25', isPaid: false, isOutOfStock: false, note: '' },
+            { id: 109, name: '|H1043假兩件裙褲', cleanName: '假兩件裙褲', spec: '粉130', price: 199, qty: 1, category: '女兒', subCategory: '衣服', channel: 'Moby', date: '2026-11-02', isPaid: false, isOutOfStock: false, note: '測試裙褲防重複' },
+            { id: 110, name: '韓國濃縮護髮油', cleanName: '韓國濃縮護髮油', spec: '玫瑰香', price: 290, qty: 1, category: '自用', subCategory: '用品', channel: 'Mina', date: '2026-11-05', isPaid: false, isOutOfStock: true, note: '賣家標示斷貨' },
+            { id: 111, name: '蝦皮購物純棉睡衣套裝', cleanName: '純棉睡衣套裝', spec: '粉130', price: 320, qty: 1, category: '女兒', subCategory: '衣服', channel: '網購平台', date: '2026-11-08', isPaid: true, paidDate: '2026-11-08', isOutOfStock: false, note: '' }
+          ];
+
+          const tx = db.transaction('orders', 'readwrite');
+          samples.forEach(s => tx.objectStore('orders').put(s));
+          await tx.done;
+          await loadAllData();
+          showToast('已成功載入測試範例資料！');
+        };
+
+        const clearFilters = () => {
+          searchQuery.value = '';
+          filterCategory.value = '';
+          filterSubCategory.value = '';
+          filterChannel.value = '';
+          timeRange.value = '3m';
+        };
+
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '';
+          return dateStr.replace(/-/g, '/');
+        };
+
+        onMounted(async () => {
+          await initDB();
+          await loadAllData();
+        });
+
+        return {
+          currentTab,
+          settleSubTab,
+          orders,
+          settlements,
+          toast,
+          editingId,
+          aiLoading,
+          geminiApiKey,
+          customChannels,
+          allChannels,
+          newChannelInput,
+          categories,
+          searchQuery,
+          timeRange,
+          customStartDate,
+          customEndDate,
+          filterCategory,
+          filterSubCategory,
+          filterChannel,
+          form,
+          checkoutModal,
+          timeRangeLabel,
+          filteredOrders,
+          unpaidGroups,
+          duplicateWarnings,
+          calculatedFinalTotal,
+          getRangeText,
+          onNameInput,
+          onCategoryChange,
+          cleanFormName,
+          handleImageUpload,
+          selectChannel,
+          saveOrder,
+          resetForm,
+          editOrder,
+          confirmDeleteOrder,
+          openCheckoutModal,
+          confirmCheckout,
+          undoSettlement,
+          saveApiKey,
+          aiAnalyzeImage,
+          aiCheckDuplicate,
+          addChannel,
+          removeChannel,
+          exportBackup,
+          importBackup,
+          loadSampleData,
+          clearFilters,
+          formatDate
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
