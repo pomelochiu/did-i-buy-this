@@ -2,32 +2,29 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <!-- Viewport for Mobile-first PWA & iOS Safari safe areas -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>did-i-buy-this | 團購助手</title>
-  
-  <!-- PWA Meta Tags -->
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f43f5e'/><text y='65' x='50' font-size='50' text-anchor='middle' fill='white'>🦛</text></svg>">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f43f5e'/><text y='65' x='50' font-size='50' text-anchor='middle' fill='white'>🦛</text></svg>">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="團購助手">
-  <meta name="theme-color" content="#fff1f2">
-
-  <!-- Tailwind CSS -->
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" type="image/png" href="icon.png">
+  <title>did-i-buy-this | 團購助手</title>
+  
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            brand: {
-              50: '#fff1f2',
-              100: '#ffe4e6',
-              200: '#fecdd3',
-              400: '#fb7185',
-              500: '#f43f5e',
-              600: '#e11d48',
-              700: '#be123c',
+            rosebg: '#FFF8F6',
+            coral: {
+              50: '#FFF1F2',
+              100: '#FFE4E6',
+              400: '#FB7185',
+              500: '#F43F5E',
+              600: '#E11D48',
             }
           }
         }
@@ -36,693 +33,594 @@
   </script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-    
-    /* iOS Safari Date Input Overflow & Styling Fix */
+    /* iOS Safari Input Date and General Fixes */
     input[type="date"] {
-      -webkit-appearance: none !important;
-      appearance: none !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      min-width: 0 !important;
-      box-sizing: border-box !important;
-      display: block !important;
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
       background-color: #ffffff;
     }
-
-    /* Custom scrollbar for horizontal pill lists */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
+    
+    body {
+      background-color: #FFF8F6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+
+    .modal-backdrop {
+      background-color: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-32 select-none">
+<body class="text-slate-800 antialiased min-h-screen flex flex-col justify-between">
 
-  <!-- App Header -->
-  <header class="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-rose-100 shadow-sm px-4 py-3 flex items-center justify-between">
-    <div class="flex items-center space-x-2">
-      <span class="text-2xl">🦛</span>
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 transform -translate-y-10 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900/90 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-xl flex items-center gap-2">
+    <span id="toast-icon">✨</span>
+    <span id="toast-msg">提示訊息</span>
+  </div>
+
+  <!-- Header Section -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-rose-100 shadow-sm px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-coral-500 to-rose-400 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+        🛍️
+      </div>
       <div>
         <h1 class="text-base font-bold text-slate-800 leading-tight">did-i-buy-this</h1>
-        <p class="text-[11px] font-semibold text-rose-500">團購防重買與對帳助手</p>
+        <p class="text-xs text-rose-500 font-medium">團購助手・防重複購</p>
       </div>
     </div>
-    <div id="quick-stats" class="text-right text-xs text-slate-500 font-medium">
-      <!-- Dynamic header metrics -->
+    <div id="header-stats" class="text-xs font-medium text-slate-500 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
+      載入中...
     </div>
   </header>
 
-  <!-- Notification Toast Container -->
-  <div id="toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm pointer-events-none flex flex-col space-y-2"></div>
-
-  <!-- Main View Container -->
-  <main class="max-w-md mx-auto p-4">
+  <!-- Main Scrollable Content Area -->
+  <main class="flex-1 max-w-lg w-full mx-auto px-3 pt-3 pb-32">
 
     <!-- TAB 1: 記一筆 (ADD ORDER) -->
     <section id="tab-add" class="tab-content space-y-4">
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 space-y-4">
-        
-        <!-- Header & Screenshot AI -->
-        <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-          <h2 class="text-base font-bold text-slate-800 flex items-center gap-1.5">
-            <span>📝</span> 新增喊單紀錄
-          </h2>
-          <button id="btn-ai-parse" onclick="triggerAiParse()" class="hidden text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold px-2.5 py-1 rounded-full border border-rose-200 transition flex items-center gap-1">
-            <span>✨</span> 截圖辨識填單
-          </button>
-        </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100/80 space-y-4">
+        <h2 class="text-sm font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+          <span>📝</span> 新增團購明細
+        </h2>
 
-        <!-- Image Upload & Preview -->
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">商品圖片 (選填)</label>
-          <div class="flex items-center space-x-3">
-            <div id="add-img-preview-box" class="w-20 h-20 bg-slate-100 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 overflow-hidden relative group">
-              <span class="text-2xl">📷</span>
-              <span class="text-[10px] mt-1">點擊上傳</span>
-              <img id="add-img-preview" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl" alt="Preview">
+        <!-- Image Upload Area -->
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-slate-600 block">商品圖片 (支援截圖貼上/拍照)</label>
+          <input type="file" accept="image/*" id="add-img-input" class="hidden" onchange="handleImageSelect(event, 'add')">
+          
+          <div id="add-img-container">
+            <!-- Empty state -->
+            <div id="add-img-placeholder" onclick="document.getElementById('add-img-input').click()" 
+                 class="w-full h-36 border-2 border-dashed border-rose-200 rounded-xl bg-rose-50/40 hover:bg-rose-50 flex flex-col items-center justify-center gap-2 cursor-pointer transition">
+              <span class="text-2xl">📸</span>
+              <span class="text-xs text-slate-500 font-medium">點擊上傳圖片或隨處按 Ctrl+V 貼上截圖</span>
             </div>
-            <input type="file" id="add-img-input" accept="image/*" class="hidden" onchange="handleImageUpload(event, 'add')">
             
-            <div class="flex-1 space-y-1.5">
-              <button type="button" onclick="document.getElementById('add-img-input').click()" class="w-full text-xs py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg border border-slate-200 transition">
-                選擇圖片 / 拍照
-              </button>
-              <button type="button" id="btn-remove-add-img" onclick="clearImage('add')" class="hidden w-full text-xs py-1.5 text-rose-500 font-medium hover:underline">
-                移除圖片
-              </button>
+            <!-- Loaded state -->
+            <div id="add-img-preview-box" class="hidden relative flex flex-col sm:flex-row items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-200">
+              <img id="add-img-preview" class="w-28 h-28 object-cover rounded-lg border border-slate-200 shadow-sm cursor-pointer" onclick="openLightbox(this.src, addFormState.name || '商品圖片')" alt="預覽">
+              <div class="flex-1 space-y-2 w-full">
+                <button type="button" onclick="triggerGeminiAI('add')" id="ai-btn-add" class="w-full py-1.5 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg text-xs font-bold shadow flex items-center justify-center gap-1 hover:opacity-90">
+                  ✨ AI 智慧識圖填表
+                </button>
+                <div class="flex gap-2">
+                  <button type="button" onclick="document.getElementById('add-img-input').click()" class="flex-1 py-1 text-xs border border-slate-300 rounded-lg text-slate-600 hover:bg-white font-medium">更換圖片</button>
+                  <button type="button" onclick="removeImage('add')" class="py-1 px-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-600 hover:bg-rose-100 font-medium">移除</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 購買渠道 Quick Pills -->
-        <div>
-          <div class="flex justify-between items-center mb-1.5">
-            <label class="text-xs font-semibold text-slate-600">購買渠道 <span class="text-rose-500">*</span></label>
-            <span class="text-[11px] text-slate-400">網購平台將直接記為已付款</span>
+        <!-- 購買渠道 (Channel Selector) -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-600 block">購買渠道</label>
+          <div id="add-channel-pills" class="flex flex-wrap gap-1.5 mb-1.5">
+            <!-- Channel Pills injected dynamically -->
           </div>
-          <div id="add-channel-pills" class="flex flex-wrap gap-1.5">
-            <!-- Channel pills rendered dynamically -->
+          <div class="flex gap-2">
+            <input type="text" id="add-channel-input" placeholder="或手動輸入購買渠道..." 
+                   class="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400 bg-slate-50/50"
+                   oninput="addFormState.channel = this.value; checkDuplicateWarning();">
+          </div>
+          <div id="net-buy-badge" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 font-medium">
+            💡 已選擇「網購平台」：系統自動標記為已付款（不併入團購月結）。
           </div>
         </div>
 
-        <!-- Product Name & Prefix Stripper -->
-        <div>
-          <div class="flex justify-between items-center mb-1">
-            <label for="add-name" class="text-xs font-semibold text-slate-600">品項名稱 <span class="text-rose-500">*</span></label>
-            <button type="button" onclick="cleanAddNamePrefix()" class="text-[11px] text-rose-600 hover:text-rose-700 font-medium underline">
-              一鍵清除賣家編號
+        <!-- 品項名稱 + 淨化編號 -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between items-center">
+            <label class="text-xs font-bold text-slate-600 block">品項名稱</label>
+            <button type="button" onclick="cleanItemName('add')" class="text-[11px] font-bold text-coral-600 bg-rose-50 border border-rose-200 rounded-md px-2 py-0.5 hover:bg-rose-100">
+              ✨ 淨化編號
             </button>
           </div>
-          <input type="text" id="add-name" placeholder="例如：1589J*涼感長褲" oninput="onAddFormChange()" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+          <input type="text" id="add-name-input" placeholder="輸入商品名稱（例: 涼感印花短袖T恤）" 
+                 class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400"
+                 oninput="onNameInput('add', this.value)">
         </div>
 
-        <!-- Duplicate Warning Alert Box -->
-        <div id="add-dup-warning" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-          <div class="flex items-center gap-1.5 text-amber-800 text-xs font-bold">
-            <span class="text-sm">⚠️</span>
-            <span>疑似重複購買提醒 (近 3 個月)</span>
+        <!-- Real-Time Duplicate Warning Alert Card -->
+        <div id="duplicate-warning" class="hidden bg-amber-50 border border-amber-300 rounded-xl p-3 space-y-2">
+          <div class="flex justify-between items-center border-b border-amber-200/60 pb-1.5">
+            <span class="text-xs font-bold text-amber-800 flex items-center gap-1">
+              ⚠️ 即時防重複提醒！發現相似歷史喊單
+            </span>
+            <div class="flex gap-1 text-[11px]">
+              <button onclick="setDupWindow(1)" id="dup-win-1" class="px-1.5 py-0.5 rounded border border-amber-300 bg-white text-amber-800">1個月</button>
+              <button onclick="setDupWindow(3)" id="dup-win-3" class="px-1.5 py-0.5 rounded border border-amber-300 bg-amber-600 text-white font-bold">3個月</button>
+              <button onclick="setDupWindow(6)" id="dup-win-6" class="px-1.5 py-0.5 rounded border border-amber-300 bg-white text-amber-800">6個月</button>
+            </div>
           </div>
-          <div id="add-dup-list" class="space-y-1 text-xs text-amber-700"></div>
+          <div id="duplicate-list" class="space-y-2 max-h-48 overflow-y-auto pt-1">
+            <!-- Duplicate items rendered here -->
+          </div>
         </div>
 
-        <!-- Spec, Price, Quantity -->
+        <!-- 規格, 單價, 數量 -->
         <div class="grid grid-cols-3 gap-2">
-          <div class="col-span-1">
-            <label for="add-spec" class="block text-xs font-semibold text-slate-600 mb-1">規格/顏色/尺寸</label>
-            <input type="text" id="add-spec" placeholder="130/黑" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">規格/顏色尺寸</label>
+            <input type="text" id="add-spec-input" placeholder="例: 白色 L" 
+                   class="w-full text-sm border border-slate-200 rounded-xl px-2.5 py-2 outline-none focus:border-coral-400">
           </div>
-          <div class="col-span-1">
-            <label for="add-price" class="block text-xs font-semibold text-slate-600 mb-1">單價 ($) <span class="text-rose-500">*</span></label>
-            <input type="number" id="add-price" min="0" placeholder="290" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">單價 ($)</label>
+            <input type="number" id="add-price-input" placeholder="0" min="0"
+                   class="w-full text-sm border border-slate-200 rounded-xl px-2.5 py-2 outline-none focus:border-coral-400">
           </div>
-          <div class="col-span-1">
-            <label for="add-qty" class="block text-xs font-semibold text-slate-600 mb-1">數量 <span class="text-rose-500">*</span></label>
-            <input type="number" id="add-qty" min="1" value="1" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">數量</label>
+            <input type="number" id="add-qty-input" value="1" min="1"
+                   class="w-full text-sm border border-slate-200 rounded-xl px-2.5 py-2 outline-none focus:border-coral-400">
           </div>
         </div>
 
-        <!-- 2-Level Linked Categories -->
+        <!-- 2-Level Category Selection -->
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label for="add-main-cat" class="block text-xs font-semibold text-slate-600 mb-1">大分類 <span class="text-rose-500">*</span></label>
-            <select id="add-main-cat" onchange="onMainCatChange('add')" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
-              <option value="女兒">女兒</option>
-              <option value="兒子">兒子</option>
-              <option value="自用">自用</option>
-              <option value="家用">家用</option>
+            <label class="text-xs font-bold text-slate-600 block mb-1">大分類</label>
+            <select id="add-main-cat" onchange="onMainCatChange('add', this.value)" class="w-full text-sm border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white">
+              <!-- Rendered dynamically -->
             </select>
           </div>
           <div>
-            <label for="add-sub-cat" class="block text-xs font-semibold text-slate-600 mb-1">子分類 <span class="text-rose-500">*</span></label>
-            <select id="add-sub-cat" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
-              <!-- Dynamically filled -->
+            <label class="text-xs font-bold text-slate-600 block mb-1">子分類</label>
+            <select id="add-sub-cat" class="w-full text-sm border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white">
+              <!-- Rendered dynamically -->
             </select>
           </div>
         </div>
 
-        <!-- Order Date (Full-width & iOS Safe) -->
+        <!-- Date Input (iOS strict full-width fix) -->
         <div>
-          <label for="add-date" class="block text-xs font-semibold text-slate-600 mb-1">喊單日期 <span class="text-rose-500">*</span></label>
-          <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
-            <input type="date" id="add-date" class="w-full px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rose-400">
-          </div>
+          <label class="text-xs font-bold text-slate-600 block mb-1">喊單日期</label>
+          <input type="date" id="add-date-input" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400">
         </div>
 
-        <!-- Note -->
-        <div>
-          <label for="add-note" class="block text-xs font-semibold text-slate-600 mb-1">備註 (選填)</label>
-          <input type="text" id="add-note" placeholder="例如：等9月預購到貨" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="pt-2 grid grid-cols-2 gap-2">
-          <button type="button" onclick="saveOrder(false)" class="w-full py-3 bg-rose-500 hover:bg-rose-600 active:bg-rose-700 text-white font-bold rounded-xl shadow-md transition text-sm">
+        <!-- Submit Buttons -->
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <button type="button" onclick="submitAddOrder(false)" class="w-full py-3 bg-gradient-to-r from-coral-500 to-rose-500 text-white rounded-xl text-sm font-bold shadow-md hover:opacity-95 active:scale-[0.99] transition">
             💾 儲存訂單
           </button>
-          <button type="button" onclick="saveOrder(true)" class="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl border border-rose-200 transition text-sm">
+          <button type="button" onclick="submitAddOrder(true)" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-md active:scale-[0.99] transition">
             ➕ 儲存並加下一款規格
           </button>
         </div>
-
       </div>
     </section>
 
-    <!-- TAB 2: 訂單查詢 (ORDER SEARCH) -->
+    <!-- TAB 2: 訂單查詢 (SEARCH, EDIT & DELETE) -->
     <section id="tab-search" class="tab-content space-y-3 hidden">
-      
-      <!-- Search & Filters Container -->
-      <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-rose-100 space-y-3">
-        <!-- Search Bar -->
-        <div class="relative">
-          <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
-          <input type="text" id="search-keyword" placeholder="搜尋品項、規格、渠道或備註..." oninput="renderOrdersList()" class="w-full pl-9 pr-8 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400">
-          <button onclick="document.getElementById('search-keyword').value=''; renderOrdersList();" class="absolute inset-y-0 right-2.5 flex items-center text-slate-400 hover:text-slate-600 text-xs font-bold">✕</button>
+      <!-- Search & Filters Header Card -->
+      <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-rose-100/80 space-y-2.5">
+        <h2 class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+          <span>🔍</span> 訂單查詢與搜尋
+        </h2>
+        
+        <!-- Keyword Search Bar -->
+        <input type="text" id="search-keyword" placeholder="搜尋品項名稱、規格、購買渠道..." 
+               class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400 bg-slate-50/50"
+               oninput="renderSearchTab()">
+
+        <!-- Filter Dropdowns Grid -->
+        <div class="grid grid-cols-2 gap-2">
+          <select id="filter-channel" onchange="renderSearchTab()" class="text-xs border border-slate-200 rounded-xl px-2 py-2 bg-white outline-none">
+            <option value="ALL">所有購買渠道</option>
+          </select>
+          <select id="filter-category" onchange="renderSearchTab()" class="text-xs border border-slate-200 rounded-xl px-2 py-2 bg-white outline-none">
+            <option value="ALL">所有分類</option>
+          </select>
         </div>
 
-        <!-- Date Range Pills -->
-        <div class="space-y-1">
-          <label class="text-[11px] font-semibold text-slate-500">時間範圍</label>
-          <div class="flex flex-wrap gap-1" id="date-range-pills">
-            <button onclick="setDateFilter('1m')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="1m">1個月</button>
-            <button onclick="setDateFilter('3m')" class="date-pill px-2.5 py-1 text-xs rounded-lg border bg-rose-50 text-rose-600 border-rose-300 font-semibold" data-range="3m">3個月</button>
-            <button onclick="setDateFilter('6m')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="6m">6個月</button>
-            <button onclick="setDateFilter('1y')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="1y">1年</button>
-            <button onclick="setDateFilter('all')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="all">全部</button>
-            <button onclick="setDateFilter('custom')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="custom">自訂</button>
+        <!-- Date Filter Buttons & Custom Date Range -->
+        <div class="space-y-1.5">
+          <div class="flex flex-wrap gap-1">
+            <button onclick="setSearchDateFilter('1M')" id="sdate-1M" class="text-xs px-2.5 py-1 rounded-lg border bg-rose-500 text-white font-medium">近1個月</button>
+            <button onclick="setSearchDateFilter('3M')" id="sdate-3M" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50">近3個月</button>
+            <button onclick="setSearchDateFilter('6M')" id="sdate-6M" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50">近6個月</button>
+            <button onclick="setSearchDateFilter('ALL')" id="sdate-ALL" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50">全部</button>
+            <button onclick="setSearchDateFilter('CUSTOM')" id="sdate-CUSTOM" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50">自訂</button>
           </div>
-          <!-- Custom Date Input Row -->
-          <div id="custom-date-box" class="hidden grid grid-cols-2 gap-2 pt-1.5">
-            <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
-              <input type="date" id="filter-start-date" onchange="renderOrdersList()" class="w-full px-2 py-1 text-xs">
+
+          <div id="search-custom-date-box" class="hidden grid grid-cols-2 gap-2 pt-1">
+            <div>
+              <span class="text-[11px] text-slate-500 font-bold block">起始日期</span>
+              <input type="date" id="search-start-date" onchange="renderSearchTab()" class="text-xs border border-slate-200 rounded-lg p-1">
             </div>
-            <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
-              <input type="date" id="filter-end-date" onchange="renderOrdersList()" class="w-full px-2 py-1 text-xs">
+            <div>
+              <span class="text-[11px] text-slate-500 font-bold block">結束日期</span>
+              <input type="date" id="search-end-date" onchange="renderSearchTab()" class="text-xs border border-slate-200 rounded-lg p-1">
             </div>
           </div>
         </div>
-
-        <!-- Category & Channel Filter Pills -->
-        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
-          <div>
-            <label class="block text-[11px] font-semibold text-slate-500 mb-1">大分類篩選</label>
-            <select id="filter-main-cat" onchange="renderOrdersList()" class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white">
-              <option value="ALL">全部大分類</option>
-              <option value="女兒">女兒</option>
-              <option value="兒子">兒子</option>
-              <option value="自用">自用</option>
-              <option value="家用">家用</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-[11px] font-semibold text-slate-500 mb-1">購買渠道篩選</label>
-            <select id="filter-channel" onchange="renderOrdersList()" class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white">
-              <option value="ALL">全部渠道</option>
-              <!-- Filled dynamically -->
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Orders Count & Subtotal Bar -->
-      <div class="flex justify-between items-center text-xs text-slate-500 px-1 font-medium">
-        <span id="search-result-count">共 0 筆訂單</span>
-        <span id="search-result-subtotal">總額：$0</span>
       </div>
 
       <!-- Orders List Container -->
-      <div id="orders-list" class="space-y-2.5">
+      <div id="search-orders-list" class="space-y-2.5">
         <!-- Rendered dynamically -->
       </div>
     </section>
 
     <!-- TAB 3: 月結對帳 (MONTHLY SETTLEMENT) -->
-    <section id="tab-settle" class="tab-content space-y-4 hidden">
-      
-      <!-- Sub-Tab Navigation -->
-      <div class="flex border-b border-rose-200">
-        <button onclick="switchSettleSubTab('unpaid')" id="btn-subtab-unpaid" class="flex-1 py-2 text-center text-xs font-bold text-rose-600 border-b-2 border-rose-500">
-          未結帳清單
+    <section id="tab-settlement" class="tab-content space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100/80 flex justify-between items-center">
+        <div>
+          <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <span>📊</span> 月結對帳總覽
+          </h2>
+          <p class="text-xs text-slate-500">自動按「年份月份」與「購買渠道」歸納未對帳項目</p>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-slate-500 block">待結總金額</span>
+          <span id="settlement-unpaid-total" class="text-lg font-extrabold text-coral-600">$0</span>
+        </div>
+      </div>
+
+      <!-- Unpaid Settlement Groups Container -->
+      <div id="unpaid-groups-container" class="space-y-4">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- History / Settled Groups Collapsible -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+        <button onclick="toggleSettledHistory()" class="w-full flex justify-between items-center text-xs font-bold text-slate-700">
+          <span>📜 已結帳紀錄 (<span id="settled-count">0</span> 筆)</span>
+          <span id="settled-arrow">▼ 展開</span>
         </button>
-        <button onclick="switchSettleSubTab('history')" id="btn-subtab-history" class="flex-1 py-2 text-center text-xs font-bold text-slate-400 border-b-2 border-transparent">
-          已結帳 / 付款紀錄
-        </button>
-      </div>
-
-      <!-- UNPAID BATCHES VIEW -->
-      <div id="settle-unpaid-view" class="space-y-3">
-        <div class="bg-rose-50 border border-rose-100 rounded-xl p-3 text-xs text-rose-800 flex justify-between items-center">
-          <div>
-            <p class="font-bold">💡 對帳提示</p>
-            <p class="text-[11px] text-rose-600">按「購買渠道 + 月份」自動分組。斷貨品項不計入對帳總額。</p>
-          </div>
-          <div class="text-right">
-            <span class="text-[10px] uppercase font-bold text-rose-400">未結總計</span>
-            <div id="unpaid-grand-total" class="text-sm font-extrabold text-rose-600">$0</div>
-          </div>
-        </div>
-
-        <div id="unpaid-batches-list" class="space-y-3">
-          <!-- Batches rendered dynamically -->
+        <div id="settled-list" class="hidden space-y-3 pt-2 border-t border-slate-100">
+          <!-- Rendered dynamically -->
         </div>
       </div>
-
-      <!-- HISTORY VIEW -->
-      <div id="settle-history-view" class="space-y-3 hidden">
-        <div id="history-settlements-list" class="space-y-3">
-          <!-- History rendered dynamically -->
-        </div>
-      </div>
-
     </section>
 
-    <!-- TAB 4: 設定 (SETTINGS) -->
+    <!-- TAB 4: 設定 (SETTINGS, BACKUP & RESTORE) -->
     <section id="tab-settings" class="tab-content space-y-4 hidden">
-      
-      <!-- Gemini API Key Config -->
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 space-y-3">
-        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-          <span>✨</span> Gemini AI 截圖辨識設定
-        </h3>
-        <p class="text-xs text-slate-500">輸入 Gemini API Key 後，上傳喊單截圖可一鍵自動填寫品項名稱、單價、數量與規格。</p>
-        <div>
-          <input type="password" id="setting-gemini-key" placeholder="AIZA-Sy..." class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+      <!-- Gemini API Key -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100/80 space-y-3">
+        <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+          <span>🤖</span> Gemini AI Key 設定
+        </h2>
+        <p class="text-xs text-slate-500">設定 key 後，上傳商品圖片可一鍵自動識別品項、規格與價格。</p>
+        <div class="flex gap-2">
+          <input type="password" id="gemini-key-input" placeholder="貼上 AI Studio API Key" class="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400">
+          <button onclick="saveGeminiKey()" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl hover:bg-slate-700">儲存</button>
+          <button onclick="clearGeminiKey()" class="px-3 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200">清除</button>
         </div>
-        <button onclick="saveGeminiKey()" class="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-lg text-xs transition">
-          儲存 API Key
-        </button>
+        <div id="gemini-status" class="text-xs text-slate-500">狀態：未設定 API Key</div>
       </div>
 
-      <!-- Custom Channels Config -->
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 space-y-3">
+      <!-- Channels Management -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100/80 space-y-3">
         <div class="flex justify-between items-center">
-          <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-            <span>🏷️</span> 自訂購買渠道管理
-          </h3>
-          <button onclick="restoreDefaultChannels()" class="text-xs text-rose-600 hover:underline">
-            恢復預設渠道
-          </button>
+          <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <span>🏷️</span> 自訂購買渠道列表
+          </h2>
+          <button onclick="resetDefaultChannels()" class="text-xs text-coral-600 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1 font-bold">恢復預設渠道</button>
         </div>
-        <p class="text-xs text-slate-500">預設包含 Moby, Mina, 319, 痛經, Renee。您可自由新增或刪除。</p>
-        
-        <div class="flex gap-2">
-          <input type="text" id="setting-new-channel" placeholder="新增渠道名稱" class="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg">
-          <button onclick="addCustomChannel()" class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-lg text-xs">
-            新增
-          </button>
+        <div id="settings-channels-list" class="flex flex-wrap gap-2">
+          <!-- Channels rendered dynamically -->
         </div>
-
-        <div id="setting-channels-list" class="flex flex-wrap gap-1.5 pt-2">
-          <!-- Channels list rendered dynamically -->
+        <div class="flex gap-2 pt-1">
+          <input type="text" id="new-channel-name" placeholder="新增購買渠道名稱..." class="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-1.5 outline-none">
+          <button onclick="addNewChannel()" class="px-4 py-1.5 bg-coral-500 text-white text-xs font-bold rounded-xl shadow hover:bg-coral-600">新增</button>
         </div>
       </div>
 
       <!-- Backup & Restore -->
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 space-y-3">
-        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-          <span>💾</span> 資料備份與還原
-        </h3>
-        <p class="text-xs text-slate-500">匯出完整 JSON 檔案以防資料遺失；支援在 iOS 或跨裝置還原。</p>
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100/80 space-y-3">
+        <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+          <span>💾</span> 資料備份與還原 (IndexedDB)
+        </h2>
+        <p class="text-xs text-slate-500">完整包含商品圖片 Base64 與自訂購買渠道，完美支援 iOS Safari 轉移。</p>
 
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="exportBackupJSON()" class="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl border border-rose-200 text-xs transition flex items-center justify-center gap-1">
-            <span>📥</span> 匯出 JSON 備份
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button onclick="exportBackupJSON()" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1">
+            📥 匯出 JSON 備份
           </button>
           
-          <!-- iOS Safe Native Import Label -->
-          <label for="import-file-input" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl border border-slate-200 text-xs transition flex items-center justify-center gap-1 cursor-pointer">
-            <span>📤</span> 匯入 JSON 檔案
+          <!-- Import JSON file label without accept attribute for iOS Safari compatibility -->
+          <label for="import-json-file" class="py-2.5 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1 cursor-pointer text-center">
+            📤 匯入 JSON 還原
           </label>
-          <input type="file" id="import-file-input" class="hidden" onchange="importBackupJSON(event)">
+          <input type="file" id="import-json-file" class="hidden" onchange="importBackupJSON(event)">
         </div>
 
-        <!-- Textarea Backup Fallback -->
-        <details class="pt-2 text-xs">
-          <summary class="font-semibold text-slate-600 cursor-pointer hover:text-rose-600">文字剪貼簿備份/還原 (備用)</summary>
-          <div class="mt-2 space-y-2">
-            <textarea id="setting-backup-text" rows="4" placeholder="在此處貼上 JSON 備份文字..." class="w-full p-2 text-[11px] font-mono border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-400"></textarea>
-            <div class="flex gap-2">
-              <button onclick="copyBackupToClipboard()" class="flex-1 py-1.5 bg-slate-100 text-slate-700 font-semibold rounded-lg text-xs">複製現有備份文字</button>
-              <button onclick="importBackupFromText()" class="flex-1 py-1.5 bg-rose-500 text-white font-semibold rounded-lg text-xs">從文字還原</button>
-            </div>
+        <!-- Collapsible Textarea Fallback -->
+        <details class="text-xs text-slate-600 pt-1 border-t border-slate-100">
+          <summary class="cursor-pointer font-bold py-1 text-slate-700">貼上備份文字還原 (備用方案)</summary>
+          <div class="space-y-2 pt-2">
+            <textarea id="import-text-area" rows="4" placeholder="在此處貼上 JSON 備份文字內容..." class="w-full text-xs p-2 border border-slate-200 rounded-xl font-mono"></textarea>
+            <button onclick="importTextBackup()" class="w-full py-2 bg-slate-700 text-white rounded-xl text-xs font-bold">執行文字還原</button>
           </div>
         </details>
-      </div>
 
-      <!-- Danger Zone -->
-      <div class="bg-red-50 border border-red-100 rounded-2xl p-4 space-y-2">
-        <h3 class="text-sm font-bold text-red-700">⚠️ 危險區域</h3>
-        <p class="text-xs text-red-600">清除本機所有訂單與對帳紀錄，此動作無法復原。</p>
-        <button onclick="clearAllData()" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition">
-          清除所有資料
-        </button>
+        <!-- Clear All -->
+        <div class="pt-3 border-t border-slate-100">
+          <button onclick="clearAllData()" class="w-full py-2.5 bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 rounded-xl text-xs font-bold">
+            🗑️ 清空本機所有訂單資料
+          </button>
+        </div>
       </div>
-
     </section>
 
   </main>
 
-  <!-- EDIT ORDER MODAL (編輯訂單彈窗) -->
-  <div id="modal-edit" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-4 space-y-4 shadow-2xl relative border border-rose-100">
-      
-      <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-1.5">
-          <span>✏️</span> 編輯訂單
-        </h3>
-        <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg p-1">✕</button>
+  <!-- EDIT ORDER MODAL OVERLAY -->
+  <div id="edit-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="text-base font-bold text-slate-800">✏️ 編輯團購訂單</h3>
+        <button onclick="closeEditModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center hover:bg-slate-200">✕</button>
       </div>
 
-      <input type="hidden" id="edit-id">
-
-      <!-- Edit Image -->
-      <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">商品圖片</label>
-        <div class="flex items-center space-x-3">
-          <div id="edit-img-preview-box" class="w-20 h-20 bg-slate-100 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 overflow-hidden relative group">
-            <span class="text-2xl">📷</span>
-            <img id="edit-img-preview" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl" alt="Preview">
-          </div>
-          <input type="file" id="edit-img-input" accept="image/*" class="hidden" onchange="handleImageUpload(event, 'edit')">
-          
-          <div class="flex-1 space-y-1.5">
-            <button type="button" onclick="document.getElementById('edit-img-input').click()" class="w-full text-xs py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg border border-slate-200 transition">
-              更換圖片
-            </button>
-            <button type="button" id="btn-remove-edit-img" onclick="clearImage('edit')" class="hidden w-full text-xs py-1.5 text-rose-500 font-medium hover:underline">
-              移除圖片
-            </button>
+      <!-- Edit Modal Content -->
+      <div class="space-y-3">
+        <!-- Edit Image Section -->
+        <div>
+          <label class="text-xs font-bold text-slate-600 block mb-1">商品圖片</label>
+          <input type="file" accept="image/*" id="edit-img-input" class="hidden" onchange="handleImageSelect(event, 'edit')">
+          <div class="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-200">
+            <img id="edit-img-preview" class="w-20 h-20 object-cover rounded-lg border border-slate-200 bg-white" src="" alt="圖片">
+            <div class="space-y-1.5 flex-1">
+              <button type="button" onclick="document.getElementById('edit-img-input').click()" class="w-full py-1 text-xs border border-slate-300 rounded-lg text-slate-700 hover:bg-white font-medium">更換圖片</button>
+              <button type="button" onclick="removeImage('edit')" class="w-full py-1 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-600 hover:bg-rose-100 font-medium">移除圖片</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- 購買渠道 Quick Pills -->
-      <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1.5">購買渠道 <span class="text-rose-500">*</span></label>
-        <div id="edit-channel-pills" class="flex flex-wrap gap-1.5">
-          <!-- Rendered dynamically -->
-        </div>
-      </div>
-
-      <!-- Product Name & Prefix Stripper -->
-      <div>
-        <div class="flex justify-between items-center mb-1">
-          <label for="edit-name" class="text-xs font-semibold text-slate-600">品項名稱 <span class="text-rose-500">*</span></label>
-          <button type="button" onclick="cleanEditNamePrefix()" class="text-[11px] text-rose-600 hover:text-rose-700 font-medium underline">
-            一鍵清除賣家編號
-          </button>
-        </div>
-        <input type="text" id="edit-name" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
-      </div>
-
-      <!-- Spec, Price, Quantity -->
-      <div class="grid grid-cols-3 gap-2">
-        <div class="col-span-1">
-          <label for="edit-spec" class="block text-xs font-semibold text-slate-600 mb-1">規格</label>
-          <input type="text" id="edit-spec" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
-        </div>
-        <div class="col-span-1">
-          <label for="edit-price" class="block text-xs font-semibold text-slate-600 mb-1">單價 ($)</label>
-          <input type="number" id="edit-price" min="0" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
-        </div>
-        <div class="col-span-1">
-          <label for="edit-qty" class="block text-xs font-semibold text-slate-600 mb-1">數量</label>
-          <input type="number" id="edit-qty" min="1" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
-        </div>
-      </div>
-
-      <!-- 2-Level Linked Categories -->
-      <div class="grid grid-cols-2 gap-2">
+        <!-- Edit Channel -->
         <div>
-          <label for="edit-main-cat" class="block text-xs font-semibold text-slate-600 mb-1">大分類</label>
-          <select id="edit-main-cat" onchange="onMainCatChange('edit')" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
-            <option value="女兒">女兒</option>
-            <option value="兒子">兒子</option>
-            <option value="自用">自用</option>
-            <option value="家用">家用</option>
-          </select>
+          <label class="text-xs font-bold text-slate-600 block mb-1">購買渠道</label>
+          <div id="edit-channel-pills" class="flex flex-wrap gap-1 mb-1.5"></div>
+          <input type="text" id="edit-channel-input" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none">
         </div>
+
+        <!-- Edit Name -->
         <div>
-          <label for="edit-sub-cat" class="block text-xs font-semibold text-slate-600 mb-1">子分類</label>
-          <select id="edit-sub-cat" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
-            <!-- Filled dynamically -->
-          </select>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-bold text-slate-600">品項名稱</label>
+            <button type="button" onclick="cleanItemName('edit')" class="text-[11px] font-bold text-coral-600 bg-rose-50 border border-rose-200 rounded-md px-2 py-0.5">✨ 淨化編號</button>
+          </div>
+          <input type="text" id="edit-name-input" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none">
+        </div>
+
+        <!-- Edit Spec, Price, Qty -->
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">規格</label>
+            <input type="text" id="edit-spec-input" class="w-full text-sm border border-slate-200 rounded-xl px-2.5 py-2 outline-none">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">單價</label>
+            <input type="number" id="edit-price-input" min="0" class="w-full text-sm border border-slate-200 rounded-xl px-2.5 py-2 outline-none">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">數量</label>
+            <input type="number" id="edit-qty-input" min="1" class="w-full text-sm border border-slate-200 rounded-xl px-2.5 py-2 outline-none">
+          </div>
+        </div>
+
+        <!-- Edit Categories -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">大分類</label>
+            <select id="edit-main-cat" onchange="onMainCatChange('edit', this.value)" class="w-full text-sm border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white"></select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">子分類</label>
+            <select id="edit-sub-cat" class="w-full text-sm border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white"></select>
+          </div>
+        </div>
+
+        <!-- Edit Date -->
+        <div>
+          <label class="text-xs font-bold text-slate-600 block mb-1">喊單日期</label>
+          <input type="date" id="edit-date-input" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none">
+        </div>
+
+        <!-- Edit Status Toggles -->
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <label class="flex items-center gap-2 p-2.5 border border-slate-200 rounded-xl bg-slate-50 cursor-pointer">
+            <input type="checkbox" id="edit-is-outofstock" class="w-4 h-4 text-coral-600 rounded">
+            <span class="text-xs font-bold text-rose-600">標記為「斷貨」</span>
+          </label>
+          <label class="flex items-center gap-2 p-2.5 border border-slate-200 rounded-xl bg-slate-50 cursor-pointer">
+            <input type="checkbox" id="edit-is-paid" class="w-4 h-4 text-emerald-600 rounded">
+            <span class="text-xs font-bold text-emerald-700">標記為「已付款」</span>
+          </label>
+        </div>
+
+        <!-- Edit Notes -->
+        <div>
+          <label class="text-xs font-bold text-slate-600 block mb-1">備註</label>
+          <input type="text" id="edit-note-input" placeholder="選填備註..." class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none">
         </div>
       </div>
 
-      <!-- Order Date -->
-      <div>
-        <label for="edit-date" class="block text-xs font-semibold text-slate-600 mb-1">喊單日期</label>
-        <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
-          <input type="date" id="edit-date" class="w-full px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rose-400">
-        </div>
+      <!-- Edit Footer Buttons -->
+      <div class="flex gap-2 pt-3 border-t border-slate-100">
+        <button onclick="closeEditModal()" class="flex-1 py-2.5 border border-slate-300 text-slate-600 rounded-xl text-xs font-bold">取消</button>
+        <button onclick="saveEditOrder()" class="flex-1 py-2.5 bg-coral-500 hover:bg-coral-600 text-white rounded-xl text-xs font-bold shadow">儲存變更</button>
       </div>
-
-      <!-- Status Switches -->
-      <div class="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-        <label class="flex items-center space-x-2 cursor-pointer">
-          <input type="checkbox" id="edit-is-outofstock" class="w-4 h-4 text-rose-600 rounded focus:ring-rose-400">
-          <span class="text-xs font-bold text-slate-700">標記為「斷貨」</span>
-        </label>
-        <label class="flex items-center space-x-2 cursor-pointer">
-          <input type="checkbox" id="edit-is-paid" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-400">
-          <span class="text-xs font-bold text-slate-700">標記為「已付款」</span>
-        </label>
-      </div>
-
-      <!-- Note -->
-      <div>
-        <label for="edit-note" class="block text-xs font-semibold text-slate-600 mb-1">備註</label>
-        <input type="text" id="edit-note" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
-      </div>
-
-      <!-- Modal Actions -->
-      <div class="pt-2 flex flex-col space-y-2">
-        <button onclick="saveEditModal()" class="w-full py-3 bg-rose-500 hover:bg-rose-600 active:bg-rose-700 text-white font-bold rounded-xl shadow-md text-sm transition">
-          💾 儲存修改
-        </button>
-        <div class="flex gap-2">
-          <button onclick="deleteOrderFromModal()" class="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl border border-red-200 text-xs transition">
-            🗑️ 刪除此筆
-          </button>
-          <button onclick="closeEditModal()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">
-            取消
-          </button>
-        </div>
-      </div>
-
     </div>
   </div>
 
-  <!-- BATCH SETTLEMENT MODAL (整批對帳彈窗) -->
-  <div id="modal-batch-settle" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl w-full max-w-md p-4 space-y-4 shadow-2xl relative border border-rose-100">
-      
-      <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-1.5">
-          <span>💳</span> 整批結帳對帳
-        </h3>
-        <button onclick="closeBatchSettleModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg p-1">✕</button>
-      </div>
-
-      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs">
-        <div class="flex justify-between text-slate-600">
-          <span>結帳渠道：</span>
-          <span id="settle-modal-channel" class="font-bold text-slate-800"></span>
-        </div>
-        <div class="flex justify-between text-slate-600">
-          <span>結帳月份：</span>
-          <span id="settle-modal-month" class="font-bold text-slate-800"></span>
-        </div>
-        <div class="flex justify-between text-slate-600">
-          <span>有效商品數 (扣除斷貨)：</span>
-          <span id="settle-modal-item-count" class="font-bold text-slate-800"></span>
-        </div>
-        <div class="flex justify-between text-slate-600 pt-1 border-t border-slate-200">
-          <span>商品小計：</span>
-          <span id="settle-modal-subtotal" class="font-bold text-rose-600"></span>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label for="settle-shipping" class="block text-xs font-semibold text-slate-600 mb-1">運費 / 雜費 (+)</label>
-          <input type="number" id="settle-shipping" value="0" min="0" oninput="calculateFinalSettleTotal()" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
-        </div>
-        <div>
-          <label for="settle-discount" class="block text-xs font-semibold text-slate-600 mb-1">折抵 / 購物金 (-)</label>
-          <input type="number" id="settle-discount" value="0" min="0" oninput="calculateFinalSettleTotal()" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
-        </div>
-      </div>
-
-      <div>
-        <label for="settle-pay-date" class="block text-xs font-semibold text-slate-600 mb-1">付款完成日期</label>
-        <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
-          <input type="date" id="settle-pay-date" class="w-full px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rose-400">
-        </div>
-      </div>
-
-      <div>
-        <label for="settle-note" class="block text-xs font-semibold text-slate-600 mb-1">對帳備註 (選填)</label>
-        <input type="text" id="settle-note" placeholder="例如：中信轉帳、含全家運費" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
-      </div>
-
-      <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 flex justify-between items-center">
-        <span class="text-xs font-bold text-rose-800">應付清總金額：</span>
-        <span id="settle-modal-final-total" class="text-lg font-extrabold text-rose-600">$0</span>
-      </div>
-
-      <div class="pt-2 flex gap-2">
-        <button onclick="confirmBatchSettle()" class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md text-sm transition">
-          ✅ 確認已付清結帳
-        </button>
-        <button onclick="closeBatchSettleModal()" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">
-          取消
-        </button>
-      </div>
-
+  <!-- FULL-SCREEN LIGHTBOX MODAL FOR IMAGE ZOOM -->
+  <div id="lightbox-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4" onclick="closeLightbox()">
+    <div class="relative max-w-full max-h-[85vh] flex flex-col items-center" onclick="event.stopPropagation()">
+      <img id="lightbox-img" src="" class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl border border-white/20" alt="放大圖片">
+      <p id="lightbox-title" class="text-white text-sm font-bold mt-3 text-center px-4 bg-black/50 py-1.5 rounded-full border border-white/10"></p>
+      <button onclick="closeLightbox()" class="mt-4 px-6 py-2 bg-white/20 hover:bg-white/30 text-white rounded-full text-xs font-bold border border-white/30">
+        關閉 (Close)
+      </button>
     </div>
   </div>
 
   <!-- BOTTOM NAVIGATION BAR -->
-  <nav class="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-rose-100 z-30 pb-[env(safe-area-inset-bottom)]">
-    <div class="max-w-md mx-auto grid grid-cols-4 pt-2.5 pb-2.5">
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-rose-100 shadow-lg">
+    <div class="max-w-lg mx-auto grid grid-cols-4 pt-2 pb-[calc(0.55rem+env(safe-area-inset-bottom))]">
       
-      <button onclick="switchTab('add')" id="nav-add" class="nav-btn flex flex-col items-center justify-center text-rose-600">
+      <button onclick="switchTab('add')" id="nav-btn-add" class="flex flex-col items-center justify-center gap-1 text-coral-500 font-bold">
         <svg class="w-[25px] h-[25px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
         </svg>
-        <span class="text-[12.5px] font-bold mt-1">記一筆</span>
+        <span class="text-[12.5px] font-bold">記一筆</span>
       </button>
 
-      <button onclick="switchTab('search')" id="nav-search" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600">
+      <button onclick="switchTab('search')" id="nav-btn-search" class="flex flex-col items-center justify-center gap-1 text-slate-400 font-bold">
         <svg class="w-[25px] h-[25px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
-        <span class="text-[12.5px] font-bold mt-1">訂單查詢</span>
+        <span class="text-[12.5px] font-bold">訂單查詢</span>
       </button>
 
-      <button onclick="switchTab('settle')" id="nav-settle" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600 relative">
+      <button onclick="switchTab('settlement')" id="nav-btn-settlement" class="flex flex-col items-center justify-center gap-1 text-slate-400 font-bold">
         <svg class="w-[25px] h-[25px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
-        <span class="text-[12.5px] font-bold mt-1">月結對帳</span>
-        <span id="nav-settle-badge" class="hidden absolute top-1.5 right-6 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
+        <span class="text-[12.5px] font-bold">月結對帳</span>
       </button>
 
-      <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600">
+      <button onclick="switchTab('settings')" id="nav-btn-settings" class="flex flex-col items-center justify-center gap-1 text-slate-400 font-bold">
         <svg class="w-[25px] h-[25px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
         </svg>
-        <span class="text-[12.5px] font-bold mt-1">設定</span>
+        <span class="text-[12.5px] font-bold">設定</span>
       </button>
 
     </div>
   </nav>
 
-  <!-- JAVASCRIPT LOGIC -->
+  <!-- JAVASCRIPT APPLICATION CORE -->
   <script>
-    // -----------------------------------------------------------------
-    // CONSTANTS & CATEGORY DATA
-    // -----------------------------------------------------------------
+    /* ==========================================================================
+       1. CONSTANTS & SYSTEM CATEGORIES
+       ========================================================================== */
     const DEFAULT_CHANNELS = ['Moby', 'Mina', '319', '痛經', 'Renee'];
-    const PLATFORM_CHANNEL = '網購平台';
-
+    
     const CATEGORIES = {
-      '女兒': ['衣服', '用品', '玩具', '其他'],
-      '兒子': ['衣服', '用品', '玩具', '其他'],
-      '自用': ['衣服', '用品', '禮物存貨', '其他'],
-      '家用': ['家居用品', '清潔用品', '食品', '其他']
+      '女兒': ['上衣', '褲子', '裙子', '洋裝', '外套', '鞋子', '髮飾配件', '內著襪子', '玩具文具', '書籍', '零食點心', '其他'],
+      '兒子': ['上衣', '褲子', '外套', '鞋子', '配件帽襪', '玩具車車', '書籍', '零食點心', '其他'],
+      '自用': ['上衣', '褲子', '裙子', '洋裝', '外套', '鞋包配件', '美妝保養', '美食零食', '生活小物', '其他'],
+      '家用': ['食品生鮮', '日用清潔', '廚房餐具', '收納居家', '常備藥品', '其他']
     };
 
-    // Keyword rule mappings for smart auto-classification
-    const AUTO_CAT_RULES = [
-      { main: '女兒', sub: '衣服', keywords: ['女童', '裙', '庫洛米', '美樂蒂', '公主', '髮圈', '女嬰', '洋裝', '莉卡'] },
-      { main: '女兒', sub: '衣服', sizeCheck: (spec) => ['130', '140', '150'].some(s => spec.includes(s)) && !spec.includes('男') },
-      { main: '兒子', sub: '衣服', keywords: ['男童', '恐龍', 'tomica', '小汽車', '拼圖', '蝙蝠俠', '超人', '高達', '變形金剛'] },
-      { main: '兒子', sub: '衣服', sizeCheck: (spec) => ['120'].some(s => spec.includes(s)) },
-      { main: '自用', sub: '用品', keywords: ['成人', '精華液', '棉片', '一條根', '面膜', '防曬', '卸妝', '膠原蛋白', '皮包'] },
-      { main: '家用', sub: '清潔用品', keywords: ['洗手乳', '馬桶', '洗衣精', '洗碗精', '除黴', '抹布', '垃圾袋', '濕紙巾'] },
-      { main: '家用', sub: '食品', keywords: ['昆布', '軟糖', '辣椒醬', '奶昔', '爆米花', '餅乾', '咖啡', '海苔', '泡麵', '堅果'] }
+    // Keyword map for smart auto-classification
+    const AUTO_CAT_KEYWORDS = [
+      { kw: ['髮夾', '髮圈', '髮飾', '頭飾', '帽子', '圍巾', '手套'], main: '女兒', sub: '髮飾配件' },
+      { kw: ['女童短褲', '女褲', '裙褲', '牛仔褲', '喇叭褲', '內搭褲'], main: '女兒', sub: '褲子' },
+      { kw: ['男童褲', '男褲', '牛仔褲', '短褲'], main: '兒子', sub: '褲子' },
+      { kw: ['洋裝', '連身裙', '禮服'], main: '女兒', sub: '洋裝' },
+      { kw: ['車車', '模型', '機器人', '樂高'], main: '兒子', sub: '玩具車車' },
+      { kw: ['衛生紙', '洗衣精', '洗碗精', '濕紙巾', '清潔劑'], main: '家用', sub: '日用清潔' },
+      { kw: ['牛肉', '豬肉', '水果', '海鮮', '蔬菜', '鮮奶'], main: '家用', sub: '食品生鮮' },
+      { kw: ['面膜', '精華液', '乳液', '口紅', '粉底'], main: '自用', sub: '美妝保養' }
     ];
 
-    // Global App State
+    /* ==========================================================================
+       2. GLOBAL STATE
+       ========================================================================== */
     let db = null;
-    let currentSelectedAddChannel = 'Moby';
-    let currentSelectedEditChannel = 'Moby';
-    let selectedDateRange = '3m';
-    let currentImageAddBase64 = null;
-    let currentImageEditBase64 = null;
-    let currentBatchSettleData = null;
+    let currentTab = 'add';
+    let channels = [];
+    let dupWindowMonths = 3;
+    let searchDateFilterType = '3M';
+    let editingOrderId = null;
 
-    // -----------------------------------------------------------------
-    // INDEXEDDB DATABASE MANAGER
-    // -----------------------------------------------------------------
+    // Add Form local state
+    let addFormState = {
+      image: '',
+      channel: '',
+      name: '',
+      spec: '',
+      unitPrice: 0,
+      qty: 1,
+      mainCategory: '女兒',
+      subCategory: '上衣',
+      date: new Date().toISOString().split('T')[0],
+      isUserCategoryTouched: false
+    };
+
+    // Edit Form local state
+    let editFormState = {
+      image: '',
+      channel: '',
+      mainCategory: '女兒',
+      subCategory: '上衣'
+    };
+
+    /* ==========================================================================
+       3. INDEXEDDB SETUP
+       ========================================================================== */
     function initDB() {
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open('DidIBuyThisDB', 2);
-        
+        const request = indexedDB.open('DIB_DB', 2);
         request.onupgradeneeded = (e) => {
-          const dbInstance = e.target.result;
-          if (!dbInstance.objectStoreNames.contains('orders')) {
-            const store = dbInstance.createObjectStore('orders', { keyPath: 'id' });
+          const dbRef = e.target.result;
+          if (!dbRef.objectStoreNames.contains('orders')) {
+            const store = dbRef.createObjectStore('orders', { keyPath: 'id' });
             store.createIndex('date', 'date', { unique: false });
             store.createIndex('channel', 'channel', { unique: false });
             store.createIndex('isPaid', 'isPaid', { unique: false });
           }
-          if (!dbInstance.objectStoreNames.contains('settlements')) {
-            dbInstance.createObjectStore('settlements', { keyPath: 'id' });
-          }
         };
-
         request.onsuccess = (e) => {
           db = e.target.result;
           resolve(db);
         };
-
-        request.onerror = (e) => {
-          showToast('資料庫初始化失敗', 'error');
-          reject(e);
-        };
+        request.onerror = (e) => reject(e.target.error);
       });
     }
 
     function getAllOrdersDB() {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         if (!db) return resolve([]);
         const tx = db.transaction('orders', 'readonly');
         const store = tx.objectStore('orders');
         const req = store.getAll();
         req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => resolve([]);
+        req.onerror = () => reject(req.error);
       });
     }
 
@@ -732,7 +630,7 @@
         const store = tx.objectStore('orders');
         const req = store.put(order);
         req.onsuccess = () => resolve();
-        req.onerror = (e) => reject(e);
+        req.onerror = () => reject(req.error);
       });
     }
 
@@ -742,1131 +640,1166 @@
         const store = tx.objectStore('orders');
         const req = store.delete(id);
         req.onsuccess = () => resolve();
-        req.onerror = (e) => reject(e);
+        req.onerror = () => reject(req.error);
       });
     }
 
-    function getAllSettlementsDB() {
-      return new Promise((resolve) => {
-        if (!db) return resolve([]);
-        const tx = db.transaction('settlements', 'readonly');
-        const store = tx.objectStore('settlements');
-        const req = store.getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => resolve([]);
-      });
-    }
-
-    function saveSettlementDB(settlement) {
+    function clearOrdersDB() {
       return new Promise((resolve, reject) => {
-        const tx = db.transaction('settlements', 'readwrite');
-        const store = tx.objectStore('settlements');
-        const req = store.put(settlement);
+        const tx = db.transaction('orders', 'readwrite');
+        const store = tx.objectStore('orders');
+        const req = store.clear();
         req.onsuccess = () => resolve();
-        req.onerror = (e) => reject(e);
+        req.onerror = () => reject(req.error);
       });
     }
 
-    function deleteSettlementDB(id) {
+    function bulkSaveOrdersDB(ordersList) {
       return new Promise((resolve, reject) => {
-        const tx = db.transaction('settlements', 'readwrite');
-        const store = tx.objectStore('settlements');
-        const req = store.delete(id);
-        req.onsuccess = () => resolve();
-        req.onerror = (e) => reject(e);
+        const tx = db.transaction('orders', 'readwrite');
+        const store = tx.objectStore('orders');
+        ordersList.forEach(o => store.put(o));
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
       });
     }
 
-    // -----------------------------------------------------------------
-    // CHANNELS STORAGE MANAGEMENT
-    // -----------------------------------------------------------------
-    function getStoredChannels() {
-      const raw = localStorage.getItem('did_i_buy_channels');
-      if (!raw) {
-        localStorage.setItem('did_i_buy_channels', JSON.stringify(DEFAULT_CHANNELS));
-        return DEFAULT_CHANNELS;
-      }
+    /* ==========================================================================
+       4. INITIALIZATION & STORAGE LOAD
+       ========================================================================== */
+    window.onload = async function() {
       try {
-        return JSON.parse(raw);
-      } catch (e) {
-        return DEFAULT_CHANNELS;
+        await initDB();
+        loadChannels();
+        initCategoryDropdowns();
+        resetAddFormDate();
+        renderHeaderStats();
+        renderAddChannelPills();
+        loadGeminiStatus();
+
+        // Clipboard Image Paste Event
+        document.addEventListener('paste', handleGlobalPaste);
+
+        // Initial duplicate check setup
+        checkDuplicateWarning();
+      } catch (err) {
+        showToast('⚠️ IndexedDB 初始化失敗: ' + err.message);
+      }
+    };
+
+    function loadChannels() {
+      const stored = localStorage.getItem('dib_channels');
+      if (stored) {
+        try {
+          channels = JSON.parse(stored);
+        } catch(e) {
+          channels = [...DEFAULT_CHANNELS];
+        }
+      } else {
+        channels = [...DEFAULT_CHANNELS];
+        localStorage.setItem('dib_channels', JSON.stringify(channels));
       }
     }
 
-    function saveStoredChannels(channels) {
-      localStorage.setItem('did_i_buy_channels', JSON.stringify(channels));
-      renderChannelPills();
+    function saveChannels() {
+      localStorage.setItem('dib_channels', JSON.stringify(channels));
+      renderAddChannelPills();
       renderSettingsChannels();
-      populateChannelFilterSelect();
     }
 
-    function restoreDefaultChannels() {
-      saveStoredChannels(DEFAULT_CHANNELS);
+    function resetDefaultChannels() {
+      channels = [...DEFAULT_CHANNELS];
+      saveChannels();
       showToast('已恢復預設購買渠道');
     }
 
-    function addCustomChannel() {
-      const input = document.getElementById('setting-new-channel');
-      const val = input.value.trim();
-      if (!val) return;
-      if (val === PLATFORM_CHANNEL) {
-        showToast('此渠道名稱為系統預留', 'warning');
-        return;
-      }
-      const channels = getStoredChannels();
-      if (channels.includes(val)) {
-        showToast('該渠道已存在', 'warning');
-        return;
-      }
-      channels.push(val);
-      saveStoredChannels(channels);
-      input.value = '';
-      showToast(`已新增渠道：${val}`);
+    function resetAddFormDate() {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('add-date-input').value = today;
+      addFormState.date = today;
     }
 
-    function removeCustomChannel(name) {
-      let channels = getStoredChannels();
-      channels = channels.filter(c => c !== name);
-      saveStoredChannels(channels);
-      showToast(`已刪除渠道：${name}`);
-    }
-
-    // -----------------------------------------------------------------
-    // UI INITIALIZATION & TAB SWITCHING
-    // -----------------------------------------------------------------
-    window.onload = async function() {
-      await initDB();
-      
-      // Default Add Date to today
-      document.getElementById('add-date').valueAsDate = new Date();
-      
-      // Init categories linked dropdowns
-      onMainCatChange('add');
-      onMainCatChange('edit');
-
-      // Init channels UI
-      renderChannelPills();
-      renderSettingsChannels();
-      populateChannelFilterSelect();
-
-      // Load saved Gemini Key if available
-      const key = localStorage.getItem('did_i_buy_gemini_key');
-      if (key) {
-        document.getElementById('setting-gemini-key').value = key;
-        document.getElementById('btn-ai-parse').classList.remove('hidden');
-      }
-
-      // Initial data render
-      updateHeaderStats();
-      renderOrdersList();
-      renderSettlementView();
-    };
-
-    function switchTab(tabName) {
+    /* ==========================================================================
+       5. UI & NAVIGATION CONTROLS
+       ========================================================================== */
+    function switchTab(tabId) {
+      currentTab = tabId;
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.nav-btn').forEach(el => {
-        el.classList.remove('text-rose-600');
-        el.classList.add('text-slate-400');
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+      // Update Nav buttons styling
+      const tabs = ['add', 'search', 'settlement', 'settings'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`nav-btn-${t}`);
+        if (t === tabId) {
+          btn.className = "flex flex-col items-center justify-center gap-1 text-coral-500 font-bold";
+        } else {
+          btn.className = "flex flex-col items-center justify-center gap-1 text-slate-400 font-bold";
+        }
       });
 
-      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-      document.getElementById(`nav-${tabName}`).classList.remove('text-slate-400');
-      document.getElementById(`nav-${tabName}`).classList.add('text-rose-600');
-
-      if (tabName === 'search') renderOrdersList();
-      if (tabName === 'settle') renderSettlementView();
-      if (tabName === 'settings') renderSettingsChannels();
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Refresh data on tab activation
+      if (tabId === 'search') renderSearchTab();
+      if (tabId === 'settlement') renderSettlementTab();
+      if (tabId === 'settings') renderSettingsChannels();
+      renderHeaderStats();
     }
 
-    function switchSettleSubTab(sub) {
-      const btnUnpaid = document.getElementById('btn-subtab-unpaid');
-      const btnHistory = document.getElementById('btn-subtab-history');
-      const viewUnpaid = document.getElementById('settle-unpaid-view');
-      const viewHistory = document.getElementById('settle-history-view');
+    function showToast(msg, icon = '✨') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-icon').innerText = icon;
+      document.getElementById('toast-msg').innerText = msg;
+      toast.classList.remove('opacity-0', '-translate-y-10');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', '-translate-y-10');
+      }, 2500);
+    }
 
-      if (sub === 'unpaid') {
-        btnUnpaid.className = 'flex-1 py-2 text-center text-xs font-bold text-rose-600 border-b-2 border-rose-500';
-        btnHistory.className = 'flex-1 py-2 text-center text-xs font-bold text-slate-400 border-b-2 border-transparent';
-        viewUnpaid.classList.remove('hidden');
-        viewHistory.classList.add('hidden');
+    async function renderHeaderStats() {
+      const all = await getAllOrdersDB();
+      const unpaidCount = all.filter(o => !o.isPaid && !o.isOutOfStock).length;
+      document.getElementById('header-stats').innerText = `已記 ${all.length} 筆 | 待結 ${unpaidCount} 筆`;
+    }
+
+    /* ==========================================================================
+       6. CATEGORIES & AUTO-CLASSIFICATION SYSTEM
+       ========================================================================== */
+    function initCategoryDropdowns() {
+      const addMain = document.getElementById('add-main-cat');
+      const editMain = document.getElementById('edit-main-cat');
+      const mainKeys = Object.keys(CATEGORIES);
+
+      addMain.innerHTML = mainKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+      editMain.innerHTML = mainKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+
+      onMainCatChange('add', mainKeys[0]);
+      onMainCatChange('edit', mainKeys[0]);
+    }
+
+    function onMainCatChange(target, mainCat) {
+      const subSelect = document.getElementById(`${target}-sub-cat`);
+      const subList = CATEGORIES[mainCat] || CATEGORIES['女兒'];
+      subSelect.innerHTML = subList.map(s => `<option value="${s}">${s}</option>`).join('');
+      
+      if (target === 'add') {
+        addFormState.mainCategory = mainCat;
+        addFormState.subCategory = subList[0];
       } else {
-        btnHistory.className = 'flex-1 py-2 text-center text-xs font-bold text-rose-600 border-b-2 border-rose-500';
-        btnUnpaid.className = 'flex-1 py-2 text-center text-xs font-bold text-slate-400 border-b-2 border-transparent';
-        viewHistory.classList.remove('hidden');
-        viewUnpaid.classList.add('hidden');
+        editFormState.mainCategory = mainCat;
+        editFormState.subCategory = subList[0];
       }
     }
 
-    // Toast Message Helper
-    function showToast(msg, type = 'success') {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-      
-      const bgColor = type === 'error' ? 'bg-red-600' : (type === 'warning' ? 'bg-amber-500' : 'bg-slate-800');
-      toast.className = `${bgColor} text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg transition-all transform translate-y-[-10px] opacity-0 flex items-center justify-between`;
-      toast.innerHTML = `<span>${msg}</span><button onclick="this.parentElement.remove()" class="ml-3 text-slate-400 hover:text-white">✕</button>`;
-
-      container.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.classList.remove('translate-y-[-10px]', 'opacity-0');
-      }, 10);
-
-      setTimeout(() => {
-        toast.classList.add('opacity-0');
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-    }
-
-    // -----------------------------------------------------------------
-    // CATEGORY DROPDOWNS & AUTO-CLASSIFICATION
-    // -----------------------------------------------------------------
-    function onMainCatChange(prefix) {
-      const mainSelect = document.getElementById(`${prefix}-main-cat`);
-      const subSelect = document.getElementById(`${prefix}-sub-cat`);
-      const mainVal = mainSelect.value;
-      
-      const subs = CATEGORIES[mainVal] || CATEGORIES['女兒'];
-      subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
-    }
-
-    // Seller prefix stripper (clean patterns like "1589J*", "0200G*", "|H1043", "|T1023", "貳六_11團(25)_")
-    function cleanSellerPrefix(name) {
-      if (!name) return '';
-      let cleaned = name;
-      // Strip common seller codes at the start
-      cleaned = cleaned.replace(/^(?:[A-Za-z0-9_\u4e00-\u9fa5]+[*(|_]|[\u4e00-\u9fa50-9_]+團\(\d+\)_?\s*)+/gi, '');
-      return cleaned.trim();
-    }
-
-    function cleanAddNamePrefix() {
-      const el = document.getElementById('add-name');
-      el.value = cleanSellerPrefix(el.value);
-      onAddFormChange();
-    }
-
-    function cleanEditNamePrefix() {
-      const el = document.getElementById('edit-name');
-      el.value = cleanSellerPrefix(el.value);
-    }
-
-    function autoClassifyCategory(name, spec) {
-      const text = (name + ' ' + spec).toLowerCase();
-      
-      for (const rule of AUTO_CAT_RULES) {
-        if (rule.keywords && rule.keywords.some(k => text.includes(k.toLowerCase()))) {
-          return { main: rule.main, sub: rule.sub };
-        }
-        if (rule.sizeCheck && rule.sizeCheck(spec)) {
-          return { main: rule.main, sub: rule.sub };
+    function autoClassifyCategory(nameText) {
+      if (!nameText) return;
+      for (const rule of AUTO_CAT_KEYWORDS) {
+        if (rule.kw.some(k => nameText.includes(k))) {
+          document.getElementById('add-main-cat').value = rule.main;
+          onMainCatChange('add', rule.main);
+          document.getElementById('add-sub-cat').value = rule.sub;
+          addFormState.mainCategory = rule.main;
+          addFormState.subCategory = rule.sub;
+          break;
         }
       }
-      return null;
     }
 
-    // -----------------------------------------------------------------
-    // CHANNEL PILLS RENDER
-    // -----------------------------------------------------------------
-    function renderChannelPills() {
-      const channels = getStoredChannels();
-      const allChannels = [...channels, PLATFORM_CHANNEL];
-
-      // Add Pills
-      const addContainer = document.getElementById('add-channel-pills');
-      addContainer.innerHTML = allChannels.map(ch => {
-        const isSelected = ch === currentSelectedAddChannel;
-        const activeStyle = isSelected ? 'bg-rose-500 text-white font-bold shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
-        return `<button type="button" onclick="selectChannel('add', '${ch}')" class="px-3 py-1.5 text-xs rounded-xl transition ${activeStyle}">${ch}</button>`;
-      }).join('');
-
-      // Edit Pills
-      const editContainer = document.getElementById('edit-channel-pills');
-      editContainer.innerHTML = allChannels.map(ch => {
-        const isSelected = ch === currentSelectedEditChannel;
-        const activeStyle = isSelected ? 'bg-rose-500 text-white font-bold shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
-        return `<button type="button" onclick="selectChannel('edit', '${ch}')" class="px-3 py-1.5 text-xs rounded-xl transition ${activeStyle}">${ch}</button>`;
-      }).join('');
-    }
-
-    function selectChannel(prefix, channelName) {
-      if (prefix === 'add') {
-        currentSelectedAddChannel = channelName;
-      } else {
-        currentSelectedEditChannel = channelName;
-      }
-      renderChannelPills();
-    }
-
-    function renderSettingsChannels() {
-      const channels = getStoredChannels();
-      const container = document.getElementById('setting-channels-list');
-      container.innerHTML = channels.map(ch => `
-        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs bg-slate-100 text-slate-700 font-medium">
-          ${ch}
-          <button onclick="removeCustomChannel('${ch}')" class="ml-1.5 text-slate-400 hover:text-rose-600 font-bold text-sm">✕</button>
-        </span>
-      `).join('');
-    }
-
-    function populateChannelFilterSelect() {
-      const select = document.getElementById('filter-channel');
-      const channels = getStoredChannels();
-      const all = [...channels, PLATFORM_CHANNEL];
+    function normalizeOrder(raw) {
+      // Image normalization (preserves images from ANY past backup schema)
+      const img = raw.image || raw.imageData || raw.photo || raw.img || raw.imageBase64 || raw.thumbnail || '';
       
-      const currentVal = select.value;
-      select.innerHTML = `<option value="ALL">全部渠道</option>` + all.map(c => `<option value="${c}">${c}</option>`).join('');
-      if (all.includes(currentVal)) select.value = currentVal;
-    }
+      // Category normalization
+      let mainCat = '自用';
+      let subCat = '其他';
 
-    // -----------------------------------------------------------------
-    // IMAGE HANDLING & CANVAS COMPRESSION
-    // -----------------------------------------------------------------
-    function handleImageUpload(e, prefix) {
-      const file = e.target.files[0];
-      if (!file) return;
+      if (raw.mainCategory && raw.subCategory) {
+        mainCat = raw.mainCategory;
+        subCat = raw.subCategory;
+      } else if (raw.category) {
+        if (typeof raw.category === 'string' && raw.category.includes('-')) {
+          const parts = raw.category.split('-');
+          mainCat = parts[0];
+          subCat = parts[1] || '其他';
+        } else if (CATEGORIES[raw.category]) {
+          mainCat = raw.category;
+          subCat = raw.subCategory || CATEGORIES[mainCat][0];
+        }
+      } else if (raw.majorCategory) {
+        mainCat = raw.majorCategory;
+        subCat = raw.minorCategory || '其他';
+      }
 
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        const img = new Image();
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          const maxDim = 600;
-          let w = img.width;
-          let h = img.height;
-          
-          if (w > maxDim || h > maxDim) {
-            if (w > h) {
-              h = Math.round((h * maxDim) / w);
-              w = maxDim;
-            } else {
-              w = Math.round((w * maxDim) / h);
-              h = maxDim;
-            }
-          }
-
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
-
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-          
-          if (prefix === 'add') {
-            currentImageAddBase64 = compressedBase64;
-            document.getElementById('add-img-preview').src = compressedBase64;
-            document.getElementById('add-img-preview').classList.remove('hidden');
-            document.getElementById('btn-remove-add-img').classList.remove('hidden');
-          } else {
-            currentImageEditBase64 = compressedBase64;
-            document.getElementById('edit-img-preview').src = compressedBase64;
-            document.getElementById('edit-img-preview').classList.remove('hidden');
-            document.getElementById('btn-remove-edit-img').classList.remove('hidden');
-          }
-        };
-        img.src = evt.target.result;
+      return {
+        id: raw.id || 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        channel: raw.channel || '網購平台',
+        name: raw.name || raw.itemName || raw.title || '未命名商品',
+        spec: raw.spec || raw.specification || raw.colorSize || '',
+        unitPrice: Number(raw.unitPrice || raw.price || 0),
+        qty: Number(raw.qty || raw.quantity || 1),
+        mainCategory: mainCat,
+        subCategory: subCat,
+        date: raw.date || new Date().toISOString().split('T')[0],
+        isPaid: Boolean(raw.isPaid || raw.paid),
+        isOutOfStock: Boolean(raw.isOutOfStock || raw.outOfStock),
+        note: raw.note || raw.notes || '',
+        image: img,
+        settlementDate: raw.settlementDate || null
       };
-      reader.readAsDataURL(file);
     }
 
-    function clearImage(prefix) {
-      if (prefix === 'add') {
-        currentImageAddBase64 = null;
-        document.getElementById('add-img-input').value = '';
-        document.getElementById('add-img-preview').classList.add('hidden');
-        document.getElementById('btn-remove-add-img').classList.add('hidden');
-      } else {
-        currentImageEditBase64 = null;
-        document.getElementById('edit-img-input').value = '';
-        document.getElementById('edit-img-preview').classList.add('hidden');
-        document.getElementById('btn-remove-edit-img').classList.add('hidden');
+    /* ==========================================================================
+       7. IMAGE HANDLING & CANVAS COMPRESSION
+       ========================================================================== */
+    function compressImageFile(file, maxDimension = 640, quality = 0.78) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > maxDimension) {
+                height = Math.round((height * maxDimension) / width);
+                width = maxDimension;
+              }
+            } else {
+              if (height > maxDimension) {
+                width = Math.round((width * maxDimension) / height);
+                height = maxDimension;
+              }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(dataUrl);
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleImageSelect(event, target) {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        const compressedBase64 = await compressImageFile(file);
+        setImageData(target, compressedBase64);
+        showToast('圖片已上傳並自動壓縮');
+      } catch (err) {
+        showToast('圖片處理失敗: ' + err.message);
       }
     }
 
-    // -----------------------------------------------------------------
-    // REAL-TIME DUPLICATE CHECK
-    // -----------------------------------------------------------------
-    async function onAddFormChange() {
-      const name = document.getElementById('add-name').value.trim();
-      const spec = document.getElementById('add-spec').value.trim();
-
-      // Smart Category auto-classification if name changed
-      if (name) {
-        const classified = autoClassifyCategory(name, spec);
-        if (classified) {
-          document.getElementById('add-main-cat').value = classified.main;
-          onMainCatChange('add');
-          document.getElementById('add-sub-cat').value = classified.sub;
+    function handleGlobalPaste(e) {
+      if (currentTab !== 'add') return;
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          const blob = item.getAsFile();
+          compressImageFile(blob).then(b64 => {
+            setImageData('add', b64);
+            showToast('已成功貼上剪貼簿圖片！');
+          });
+          break;
         }
       }
+    }
 
-      if (!name || name.length < 2) {
-        document.getElementById('add-dup-warning').classList.add('hidden');
+    function setImageData(target, b64) {
+      if (target === 'add') {
+        addFormState.image = b64;
+        document.getElementById('add-img-placeholder').classList.add('hidden');
+        document.getElementById('add-img-preview-box').classList.remove('hidden');
+        document.getElementById('add-img-preview').src = b64;
+      } else {
+        editFormState.image = b64;
+        document.getElementById('edit-img-preview').src = b64;
+      }
+    }
+
+    function removeImage(target) {
+      if (target === 'add') {
+        addFormState.image = '';
+        document.getElementById('add-img-input').value = '';
+        document.getElementById('add-img-preview-box').classList.add('hidden');
+        document.getElementById('add-img-placeholder').classList.remove('hidden');
+      } else {
+        editFormState.image = '';
+        document.getElementById('edit-img-input').value = '';
+        document.getElementById('edit-img-preview').src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+      }
+      showToast('已移除圖片');
+    }
+
+    function openLightbox(imgSrc, titleText) {
+      if (!imgSrc || imgSrc.includes('data:image/svg+xml')) return;
+      document.getElementById('lightbox-img').src = imgSrc;
+      document.getElementById('lightbox-title').innerText = titleText || '商品圖片';
+      document.getElementById('lightbox-modal').classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox-modal').classList.add('hidden');
+    }
+
+    /* ==========================================================================
+       8. SELLER PREFIX AUTO-CLEANER & FUZZY DUPLICATE CHECK
+       ========================================================================== */
+    function cleanItemName(target) {
+      const inputEl = document.getElementById(`${target}-name-input`);
+      let val = inputEl.value;
+      if (!val) return;
+
+      // Strips prefixes like: 1589J*, 0200G*, |H1043, |T1023, 貳六_11團(25)_, [現貨], 【預購】
+      val = val.replace(/^(\d+[A-Z0-9]*\*|\|[A-Z0-9]+|貳六_\d+團\(\d+\)_|\[現貨\]|【預購】|【現貨】|\[預購\]|\d+\*)/i, '').trim();
+      inputEl.value = val;
+
+      if (target === 'add') {
+        addFormState.name = val;
+        onNameInput('add', val);
+      }
+      showToast('已淨化編號與前綴', '✨');
+    }
+
+    function onNameInput(target, val) {
+      if (target === 'add') {
+        addFormState.name = val;
+        if (!addFormState.isUserCategoryTouched) {
+          autoClassifyCategory(val);
+        }
+        checkDuplicateWarning();
+      }
+    }
+
+    function setDupWindow(months) {
+      dupWindowMonths = months;
+      [1, 3, 6].forEach(m => {
+        const btn = document.getElementById(`dup-win-${m}`);
+        if (m === months) {
+          btn.className = "px-1.5 py-0.5 rounded border border-amber-300 bg-amber-600 text-white font-bold";
+        } else {
+          btn.className = "px-1.5 py-0.5 rounded border border-amber-300 bg-white text-amber-800";
+        }
+      });
+      checkDuplicateWarning();
+    }
+
+    async function checkDuplicateWarning() {
+      const queryName = (addFormState.name || '').trim();
+      const warningBox = document.getElementById('duplicate-warning');
+      const listContainer = document.getElementById('duplicate-list');
+
+      if (!queryName || queryName.length < 1) {
+        warningBox.classList.add('hidden');
         return;
       }
 
-      const orders = await getAllOrdersDB();
+      const allOrders = await getAllOrdersDB();
       const now = new Date();
-      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+      const minDate = new Date();
+      minDate.setMonth(now.getMonth() - dupWindowMonths);
 
-      // Filter recent orders
-      const recentOrders = orders.filter(o => new Date(o.date) >= threeMonthsAgo);
+      // Character set & substring matching (e.g. "喇叭褲" matches "微絨蝴蝶結喇叭褲", "褲裙" matches "裙褲")
+      const queryChars = Array.from(new Set(queryName.replace(/\s+/g, '')));
 
-      // Fuzzy check by character set matching
-      const targetChars = new Set(Array.from(name.replace(/\s+/g, '')));
-      
-      const duplicates = recentOrders.filter(o => {
-        const existingName = (o.name || '').replace(/\s+/g, '');
-        if (existingName.includes(name) || name.includes(existingName)) return true;
+      const matches = allOrders.filter(o => {
+        const orderDate = new Date(o.date);
+        if (orderDate < minDate) return false;
+        
+        const oName = (o.name || '').toLowerCase();
+        const qName = queryName.toLowerCase();
 
-        // Character intersection match
-        let matchCount = 0;
-        for (let char of targetChars) {
-          if (existingName.includes(char)) matchCount++;
-        }
-        return matchCount >= Math.min(3, targetChars.size);
+        // Substring match
+        if (oName.includes(qName) || qName.includes(oName)) return true;
+
+        // Character overlap match (> 60% characters match)
+        const matchedChars = queryChars.filter(c => oName.includes(c.toLowerCase()));
+        return (matchedChars.length / queryChars.length) >= 0.6;
       });
 
-      const warningBox = document.getElementById('add-dup-warning');
-      const listContainer = document.getElementById('add-dup-list');
-
-      if (duplicates.length > 0) {
+      if (matches.length === 0) {
+        warningBox.classList.add('hidden');
+      } else {
         warningBox.classList.remove('hidden');
-        listContainer.innerHTML = duplicates.map(d => `
-          <div class="flex justify-between items-center py-0.5 border-b border-amber-200/50">
-            <span>🔹 <strong>${d.channel}</strong>: ${d.name} (${d.spec || '無規格'}) - $${d.price}x${d.qty}</span>
-            <span class="text-[10px] text-amber-600">${d.date}</span>
+        listContainer.innerHTML = matches.map(m => `
+          <div class="flex items-center gap-2.5 bg-white p-2 rounded-xl border border-amber-200 shadow-sm text-xs">
+            ${m.image 
+              ? `<img src="${m.image}" onclick="openLightbox('${m.image}', '${m.name}')" class="w-11 h-11 object-cover rounded-lg border flex-shrink-0 cursor-pointer">` 
+              : `<div class="w-11 h-11 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0 text-base">🛍️</div>`
+            }
+            <div class="flex-1 min-w-0">
+              <div class="font-bold text-slate-800 truncate">${m.name}</div>
+              <div class="text-[11px] text-slate-500 flex gap-2">
+                <span>渠道: <b>${m.channel}</b></span>
+                <span>規格: <b>${m.spec || '無'}</b></span>
+              </div>
+              <div class="text-[10px] text-amber-700">喊單日期: ${m.date} (${m.isPaid ? '已付款' : '未付款'})</div>
+            </div>
           </div>
         `).join('');
-      } else {
-        warningBox.classList.add('hidden');
       }
     }
 
-    // -----------------------------------------------------------------
-    // ADD ORDER FUNCTIONALITY
-    // -----------------------------------------------------------------
-    async function saveOrder(keepForNextSpec = false) {
-      const nameInput = document.getElementById('add-name');
-      const priceInput = document.getElementById('add-price');
-      const qtyInput = document.getElementById('add-qty');
-      const dateInput = document.getElementById('add-date');
+    /* ==========================================================================
+       9. ADD ORDER SUBMISSION
+       ========================================================================== */
+    function renderAddChannelPills() {
+      const container = document.getElementById('add-channel-pills');
+      const allChannels = [...channels, '網購平台'];
 
-      const name = nameInput.value.trim();
-      const price = parseFloat(priceInput.value);
-      const qty = parseInt(qtyInput.value) || 1;
-      const date = dateInput.value;
-      const spec = document.getElementById('add-spec').value.trim();
+      container.innerHTML = allChannels.map(c => `
+        <button type="button" onclick="selectChannel('add', '${c}')" 
+                class="channel-pill px-3 py-1 rounded-full text-xs font-semibold border transition ${
+                  addFormState.channel === c 
+                    ? 'bg-coral-500 text-white border-coral-500 shadow-sm' 
+                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                }">
+          ${c === '網購平台' ? '🛒 網購平台' : c}
+        </button>
+      `).join('');
+
+      // Auto select first channel if unselected
+      if (!addFormState.channel && channels.length > 0) {
+        selectChannel('add', channels[0]);
+      }
+    }
+
+    function selectChannel(target, channelName) {
+      if (target === 'add') {
+        addFormState.channel = channelName;
+        document.getElementById('add-channel-input').value = channelName;
+        renderAddChannelPills();
+        
+        const netBadge = document.getElementById('net-buy-badge');
+        if (channelName === '網購平台') {
+          netBadge.classList.remove('hidden');
+        } else {
+          netBadge.classList.add('hidden');
+        }
+        checkDuplicateWarning();
+      } else {
+        editFormState.channel = channelName;
+        document.getElementById('edit-channel-input').value = channelName;
+        renderEditChannelPills();
+      }
+    }
+
+    async function submitAddOrder(keepNextSpec = false) {
+      const name = (document.getElementById('add-name-input').value || '').trim();
+      if (!name) {
+        showToast('請輸入品項名稱！', '⚠️');
+        return;
+      }
+
+      const channel = (document.getElementById('add-channel-input').value || addFormState.channel || '預設渠道').trim();
+      const spec = document.getElementById('add-spec-input').value.trim();
+      const price = Number(document.getElementById('add-price-input').value || 0);
+      const qty = Number(document.getElementById('add-qty-input').value || 1);
       const mainCat = document.getElementById('add-main-cat').value;
       const subCat = document.getElementById('add-sub-cat').value;
-      const note = document.getElementById('add-note').value.trim();
-
-      if (!name) {
-        showToast('請填寫品項名稱', 'error');
-        nameInput.focus();
-        return;
-      }
-      if (isNaN(price) || price < 0) {
-        showToast('請填寫有效的單價', 'error');
-        priceInput.focus();
-        return;
-      }
-      if (!date) {
-        showToast('請選擇喊單日期', 'error');
-        return;
-      }
-
-      // If channel is 網購平台, automatically mark as paid
-      const isPaid = (currentSelectedAddChannel === PLATFORM_CHANNEL);
+      const date = document.getElementById('add-date-input').value || new Date().toISOString().split('T')[0];
+      const isNetBuy = (channel === '網購平台');
 
       const newOrder = {
-        id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-        channel: currentSelectedAddChannel,
+        id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        channel: channel,
         name: name,
         spec: spec,
-        price: price,
+        unitPrice: price,
         qty: qty,
         mainCategory: mainCat,
         subCategory: subCat,
         date: date,
+        isPaid: isNetBuy,
         isOutOfStock: false,
-        isPaid: isPaid,
-        note: note,
-        image: currentImageAddBase64,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        note: '',
+        image: addFormState.image,
+        settlementDate: isNetBuy ? date : null
       };
 
-      try {
-        await saveOrderDB(newOrder);
-        showToast(isPaid ? '已儲存喊單 (網購平台自動標記為已付款)' : '喊單紀錄儲存成功！');
-        
-        updateHeaderStats();
-        renderOrdersList();
+      await saveOrderDB(newOrder);
 
-        if (keepForNextSpec) {
-          // Clear only spec and note
-          document.getElementById('add-spec').value = '';
-          document.getElementById('add-note').value = '';
-          document.getElementById('add-spec').focus();
-        } else {
-          // Reset entire form
-          nameInput.value = '';
-          document.getElementById('add-spec').value = '';
-          priceInput.value = '';
-          qtyInput.value = '1';
-          document.getElementById('add-note').value = '';
-          clearImage('add');
-          document.getElementById('add-dup-warning').classList.add('hidden');
-        }
-      } catch (e) {
-        showToast('儲存失敗：' + e.message, 'error');
+      if (keepNextSpec) {
+        document.getElementById('add-spec-input').value = '';
+        addFormState.spec = '';
+        showToast('已儲存！保留渠道/品項/圖片，請輸入下一款規格', '➕');
+      } else {
+        // Full reset form
+        document.getElementById('add-name-input').value = '';
+        document.getElementById('add-spec-input').value = '';
+        document.getElementById('add-price-input').value = '';
+        document.getElementById('add-qty-input').value = '1';
+        removeImage('add');
+        addFormState.name = '';
+        addFormState.spec = '';
+        addFormState.unitPrice = 0;
+        addFormState.qty = 1;
+        document.getElementById('duplicate-warning').classList.add('hidden');
+        showToast('訂單成功儲存！', '💾');
       }
+
+      renderHeaderStats();
     }
 
-    // -----------------------------------------------------------------
-    // ORDER SEARCH & CARDS RENDER (TAB 2)
-    // -----------------------------------------------------------------
-    function setDateFilter(range) {
-      selectedDateRange = range;
-      document.querySelectorAll('.date-pill').forEach(btn => {
-        if (btn.dataset.range === range) {
-          btn.className = 'date-pill px-2.5 py-1 text-xs rounded-lg border bg-rose-50 text-rose-600 border-rose-300 font-semibold';
+    /* ==========================================================================
+       10. TAB 2: 訂單查詢 (SEARCH, EDIT & DELETE)
+       ========================================================================== */
+    function setSearchDateFilter(type) {
+      searchDateFilterType = type;
+      ['1M', '3M', '6M', 'ALL', 'CUSTOM'].forEach(t => {
+        const btn = document.getElementById(`sdate-${t}`);
+        if (t === type) {
+          btn.className = "text-xs px-2.5 py-1 rounded-lg border bg-rose-500 text-white font-medium shadow-sm";
         } else {
-          btn.className = 'date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200';
+          btn.className = "text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50";
         }
       });
 
-      const customBox = document.getElementById('custom-date-box');
-      if (range === 'custom') {
+      const customBox = document.getElementById('search-custom-date-box');
+      if (type === 'CUSTOM') {
         customBox.classList.remove('hidden');
       } else {
         customBox.classList.add('hidden');
       }
-
-      renderOrdersList();
+      renderSearchTab();
     }
 
-    async function renderOrdersList() {
-      const orders = await getAllOrdersDB();
-      const keyword = document.getElementById('search-keyword').value.trim().toLowerCase();
-      const filterMainCat = document.getElementById('filter-main-cat').value;
-      const filterChannel = document.getElementById('filter-channel').value;
+    async function renderSearchTab() {
+      const allOrders = await getAllOrdersDB();
+      const normalizedOrders = allOrders.map(normalizeOrder);
 
-      let filtered = orders;
+      // Populate filter dropdowns
+      const channelSelect = document.getElementById('filter-channel');
+      const categorySelect = document.getElementById('filter-category');
 
-      // Filter by Keyword
-      if (keyword) {
-        filtered = filtered.filter(o => {
-          const matchName = (o.name || '').toLowerCase().includes(keyword);
-          const matchSpec = (o.spec || '').toLowerCase().includes(keyword);
-          const matchChannel = (o.channel || '').toLowerCase().includes(keyword);
-          const matchNote = (o.note || '').toLowerCase().includes(keyword);
-          return matchName || matchSpec || matchChannel || matchNote;
-        });
-      }
+      const uniqueChannels = Array.from(new Set(normalizedOrders.map(o => o.channel)));
+      const uniqueCats = Array.from(new Set(normalizedOrders.map(o => `${o.mainCategory}-${o.subCategory}`)));
 
-      // Filter by Category
-      if (filterMainCat !== 'ALL') {
-        filtered = filtered.filter(o => o.mainCategory === filterMainCat);
-      }
+      const currentChanVal = channelSelect.value;
+      const currentCatVal = categorySelect.value;
 
-      // Filter by Channel
-      if (filterChannel !== 'ALL') {
-        filtered = filtered.filter(o => o.channel === filterChannel);
-      }
+      channelSelect.innerHTML = `<option value="ALL">所有購買渠道 (${uniqueChannels.length})</option>` +
+        uniqueChannels.map(c => `<option value="${c}">${c}</option>`).join('');
+      
+      categorySelect.innerHTML = `<option value="ALL">所有分類 (${uniqueCats.length})</option>` +
+        uniqueCats.map(c => `<option value="${c}">${c}</option>`).join('');
 
-      // Filter by Date Range
+      channelSelect.value = uniqueChannels.includes(currentChanVal) ? currentChanVal : 'ALL';
+      categorySelect.value = uniqueCats.includes(currentCatVal) ? currentCatVal : 'ALL';
+
+      // Filtering Logic
+      const keyword = (document.getElementById('search-keyword').value || '').toLowerCase().trim();
+      const selChannel = channelSelect.value;
+      const selCategory = categorySelect.value;
+
       const now = new Date();
-      if (selectedDateRange === '1m') {
-        const start = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        filtered = filtered.filter(o => new Date(o.date) >= start);
-      } else if (selectedDateRange === '3m') {
-        const start = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-        filtered = filtered.filter(o => new Date(o.date) >= start);
-      } else if (selectedDateRange === '6m') {
-        const start = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
-        filtered = filtered.filter(o => new Date(o.date) >= start);
-      } else if (selectedDateRange === '1y') {
-        const start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        filtered = filtered.filter(o => new Date(o.date) >= start);
-      } else if (selectedDateRange === 'custom') {
-        const startDate = document.getElementById('filter-start-date').value;
-        const endDate = document.getElementById('filter-end-date').value;
-        if (startDate) filtered = filtered.filter(o => o.date >= startDate);
-        if (endDate) filtered = filtered.filter(o => o.date <= endDate);
+      let minDate = null;
+      let maxDate = null;
+
+      if (searchDateFilterType === '1M') {
+        minDate = new Date(); minDate.setMonth(now.getMonth() - 1);
+      } else if (searchDateFilterType === '3M') {
+        minDate = new Date(); minDate.setMonth(now.getMonth() - 3);
+      } else if (searchDateFilterType === '6M') {
+        minDate = new Date(); minDate.setMonth(now.getMonth() - 6);
+      } else if (searchDateFilterType === 'CUSTOM') {
+        const startDateVal = document.getElementById('search-start-date').value;
+        const endDateVal = document.getElementById('search-end-date').value;
+        if (startDateVal) minDate = new Date(startDateVal);
+        if (endDateVal) maxDate = new Date(endDateVal);
       }
 
-      // Sort by date descending
-      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+      const filtered = normalizedOrders.filter(o => {
+        // Channel filter
+        if (selChannel !== 'ALL' && o.channel !== selChannel) return false;
 
-      // Metrics calculation
-      let totalAmount = 0;
-      filtered.forEach(o => {
-        if (!o.isOutOfStock) {
-          totalAmount += (o.price * o.qty);
+        // Category filter
+        if (selCategory !== 'ALL' && `${o.mainCategory}-${o.subCategory}` !== selCategory) return false;
+
+        // Date filter
+        const oDate = new Date(o.date);
+        if (minDate && oDate < minDate) return false;
+        if (maxDate && oDate > maxDate) return false;
+
+        // Keyword filter
+        if (keyword) {
+          const matchTarget = `${o.name} ${o.spec} ${o.channel} ${o.mainCategory} ${o.subCategory} ${o.note}`.toLowerCase();
+          const kwChars = Array.from(new Set(keyword.split('')));
+          return kwChars.every(c => matchTarget.includes(c));
         }
+
+        return true;
       });
 
-      document.getElementById('search-result-count').textContent = `共 ${filtered.length} 筆訂單`;
-      document.getElementById('search-result-subtotal').textContent = `有效總額：$${totalAmount.toLocaleString()}`;
+      // Sort by Date Descending
+      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-      const container = document.getElementById('orders-list');
+      const container = document.getElementById('search-orders-list');
+
       if (filtered.length === 0) {
         container.innerHTML = `
-          <div class="text-center py-12 text-slate-400 space-y-2">
-            <span class="text-4xl">🛍️</span>
-            <p class="text-xs">查無符合條件的喊單紀錄</p>
+          <div class="bg-white rounded-2xl p-8 text-center text-slate-400 space-y-2 border border-slate-100">
+            <span class="text-4xl block">🔍</span>
+            <p class="text-xs font-medium">找不到符合條件的團購訂單</p>
           </div>
         `;
         return;
       }
 
       container.innerHTML = filtered.map(o => {
-        const isOut = o.isOutOfStock;
-        const isPaid = o.isPaid;
-        const effectivePrice = isOut ? 0 : (o.price * o.qty);
-
-        // Status Badges
-        let statusBadge = '';
-        if (isOut) {
-          statusBadge = '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 text-slate-600">🚫 斷貨</span>';
-        } else if (isPaid) {
-          statusBadge = '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">✅ 已付款</span>';
-        } else {
-          statusBadge = '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700">⏳ 未付款</span>';
-        }
-
-        const thumbnail = o.image 
-          ? `<img src="${o.image}" class="w-14 h-14 object-cover rounded-xl border border-slate-100 flex-shrink-0" alt="thumb">`
-          : `<div class="w-14 h-14 bg-rose-50 text-rose-300 rounded-xl flex items-center justify-center text-xl flex-shrink-0 border border-rose-100">🛍️</div>`;
-
+        const totalPrice = o.isOutOfStock ? 0 : (o.unitPrice * o.qty);
         return `
-          <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 space-y-2 relative group hover:border-rose-200 transition">
-            
-            <!-- Top Badges Row -->
-            <div class="flex justify-between items-center text-xs">
+          <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex gap-3 items-center relative ${o.isOutOfStock ? 'opacity-70 bg-slate-50' : ''}">
+            <!-- Thumbnail -->
+            ${o.image 
+              ? `<img src="${o.image}" onclick="openLightbox('${o.image}', '${o.name}')" class="w-16 h-16 object-cover rounded-xl border border-slate-200 flex-shrink-0 cursor-pointer shadow-sm">`
+              : `<div class="w-16 h-16 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-400 flex-shrink-0 text-xl font-bold">🛍️</div>`
+            }
+
+            <!-- Details -->
+            <div class="flex-1 min-w-0 space-y-1">
               <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 font-bold text-[11px]">${o.channel}</span>
-                <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-medium">${o.mainCategory}-${o.subCategory}</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-coral-600">${o.channel}</span>
+                <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">${o.mainCategory}-${o.subCategory}</span>
+                ${o.isOutOfStock ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500 text-white">已斷貨</span>` : ''}
+                ${o.isPaid ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">已付款</span>` : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">未付款</span>`}
               </div>
-              <div class="flex items-center gap-2">
-                <span class="text-[11px] text-slate-400 font-mono">${o.date}</span>
-                ${statusBadge}
+
+              <h3 class="text-xs font-bold text-slate-800 truncate ${o.isOutOfStock ? 'line-through text-slate-400' : ''}">${o.name}</h3>
+              
+              <div class="text-[11px] text-slate-500 flex justify-between items-center">
+                <span>規格: <b class="text-slate-700">${o.spec || '預設'}</b> × ${o.qty}</span>
+                <span class="text-xs font-extrabold ${o.isOutOfStock ? 'line-through text-slate-400' : 'text-slate-800'}">
+                  ${o.isOutOfStock ? `<span class="text-rose-500 font-bold">$0</span> (原 $${o.unitPrice * o.qty})` : `$${totalPrice}`}
+                </span>
+              </div>
+
+              <div class="text-[10px] text-slate-400 flex justify-between items-center pt-0.5 border-t border-slate-50">
+                <span>喊單日: ${o.date}</span>
+                <div class="flex gap-2">
+                  <button onclick="openEditModal('${o.id}')" class="text-xs text-indigo-600 font-bold hover:underline">✏️ 編輯</button>
+                  <button onclick="confirmDeleteOrder('${o.id}')" class="text-xs text-rose-500 font-bold hover:underline">🗑️ 刪除</button>
+                </div>
               </div>
             </div>
-
-            <!-- Content Row -->
-            <div class="flex space-x-3 items-center">
-              ${thumbnail}
-              <div class="flex-1 min-w-0 space-y-0.5">
-                <h4 class="text-sm font-bold text-slate-800 truncate ${isOut ? 'line-through text-slate-400' : ''}">${o.name}</h4>
-                <p class="text-xs text-slate-500 truncate">規格: ${o.spec || '無'} | 數量: ${o.qty}</p>
-                ${o.note ? `<p class="text-[11px] text-slate-400 italic truncate">註: ${o.note}</p>` : ''}
-              </div>
-              <div class="text-right flex-shrink-0">
-                <div class="text-xs text-slate-400 font-medium">$${o.price} x ${o.qty}</div>
-                <div class="text-sm font-extrabold ${isOut ? 'line-through text-slate-400' : 'text-rose-600'}">$${effectivePrice.toLocaleString()}</div>
-              </div>
-            </div>
-
-            <!-- Action Buttons Footer (PROMINENT EDIT & DELETE) -->
-            <div class="pt-2 border-t border-slate-100 flex justify-end items-center space-x-2">
-              <button onclick="openEditModal('${o.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-                編輯
-              </button>
-              <button onclick="confirmDeleteOrder('${o.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 rounded-lg text-xs font-medium transition flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-                刪除
-              </button>
-            </div>
-
           </div>
         `;
       }).join('');
     }
 
-    // -----------------------------------------------------------------
-    // EDIT ORDER MODAL LOGIC
-    // -----------------------------------------------------------------
+    /* ==========================================================================
+       11. EDIT ORDER MODAL
+       ========================================================================== */
     async function openEditModal(orderId) {
-      const orders = await getAllOrdersDB();
-      const order = orders.find(o => o.id === orderId);
-      if (!order) {
-        showToast('找不到該筆訂單', 'error');
-        return;
-      }
+      editingOrderId = orderId;
+      const allOrders = await getAllOrdersDB();
+      const raw = allOrders.find(o => o.id === orderId);
+      if (!raw) return;
 
-      document.getElementById('edit-id').value = order.id;
-      document.getElementById('edit-name').value = order.name || '';
-      document.getElementById('edit-spec').value = order.spec || '';
-      document.getElementById('edit-price').value = order.price || 0;
-      document.getElementById('edit-qty').value = order.qty || 1;
-      document.getElementById('edit-date').value = order.date || '';
-      document.getElementById('edit-note').value = order.note || '';
-      document.getElementById('edit-is-outofstock').checked = !!order.isOutOfStock;
-      document.getElementById('edit-is-paid').checked = !!order.isPaid;
+      const o = normalizeOrder(raw);
+      editFormState = {
+        image: o.image,
+        channel: o.channel,
+        mainCategory: o.mainCategory,
+        subCategory: o.subCategory
+      };
 
-      // Select Channel
-      currentSelectedEditChannel = order.channel || DEFAULT_CHANNELS[0];
-      renderChannelPills();
+      document.getElementById('edit-name-input').value = o.name;
+      document.getElementById('edit-spec-input').value = o.spec;
+      document.getElementById('edit-price-input').value = o.unitPrice;
+      document.getElementById('edit-qty-input').value = o.qty;
+      document.getElementById('edit-date-input').value = o.date;
+      document.getElementById('edit-is-outofstock').checked = o.isOutOfStock;
+      document.getElementById('edit-is-paid').checked = o.isPaid;
+      document.getElementById('edit-note-input').value = o.note || '';
 
-      // Select Category
-      document.getElementById('edit-main-cat').value = order.mainCategory || '女兒';
-      onMainCatChange('edit');
-      document.getElementById('edit-sub-cat').value = order.subCategory || '衣服';
+      document.getElementById('edit-main-cat').value = o.mainCategory;
+      onMainCatChange('edit', o.mainCategory);
+      document.getElementById('edit-sub-cat').value = o.subCategory;
 
-      // Load Image Preview
-      currentImageEditBase64 = order.image || null;
-      if (order.image) {
-        document.getElementById('edit-img-preview').src = order.image;
-        document.getElementById('edit-img-preview').classList.remove('hidden');
-        document.getElementById('btn-remove-edit-img').classList.remove('hidden');
+      renderEditChannelPills();
+      selectChannel('edit', o.channel);
+
+      if (o.image) {
+        document.getElementById('edit-img-preview').src = o.image;
       } else {
-        document.getElementById('edit-img-preview').classList.add('hidden');
-        document.getElementById('btn-remove-edit-img').classList.add('hidden');
+        removeImage('edit');
       }
 
-      document.getElementById('modal-edit').classList.remove('hidden');
+      document.getElementById('edit-modal').classList.remove('hidden');
+    }
+
+    function renderEditChannelPills() {
+      const container = document.getElementById('edit-channel-pills');
+      container.innerHTML = channels.map(c => `
+        <button type="button" onclick="selectChannel('edit', '${c}')" 
+                class="px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                  editFormState.channel === c 
+                    ? 'bg-coral-500 text-white border-coral-500' 
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                }">${c}</button>
+      `).join('');
     }
 
     function closeEditModal() {
-      document.getElementById('modal-edit').classList.add('hidden');
+      document.getElementById('edit-modal').classList.add('hidden');
+      editingOrderId = null;
     }
 
-    async function saveEditModal() {
-      const id = document.getElementById('edit-id').value;
-      const name = document.getElementById('edit-name').value.trim();
-      const price = parseFloat(document.getElementById('edit-price').value);
-      const qty = parseInt(document.getElementById('edit-qty').value) || 1;
-      const date = document.getElementById('edit-date').value;
-
+    async function saveEditOrder() {
+      if (!editingOrderId) return;
+      const name = document.getElementById('edit-name-input').value.trim();
       if (!name) {
-        showToast('請填寫品項名稱', 'error');
-        return;
-      }
-      if (isNaN(price) || price < 0) {
-        showToast('請填寫有效單價', 'error');
-        return;
-      }
-      if (!date) {
-        showToast('請選擇日期', 'error');
+        showToast('品項名稱不可為空！', '⚠️');
         return;
       }
 
-      const orders = await getAllOrdersDB();
-      const existing = orders.find(o => o.id === id);
+      const allOrders = await getAllOrdersDB();
+      const existing = allOrders.find(o => o.id === editingOrderId);
+      if (!existing) return;
 
-      const updatedOrder = {
+      const updated = {
         ...existing,
-        id: id,
-        channel: currentSelectedEditChannel,
         name: name,
-        spec: document.getElementById('edit-spec').value.trim(),
-        price: price,
-        qty: qty,
+        channel: document.getElementById('edit-channel-input').value.trim() || editFormState.channel,
+        spec: document.getElementById('edit-spec-input').value.trim(),
+        unitPrice: Number(document.getElementById('edit-price-input').value || 0),
+        qty: Number(document.getElementById('edit-qty-input').value || 1),
         mainCategory: document.getElementById('edit-main-cat').value,
         subCategory: document.getElementById('edit-sub-cat').value,
-        date: date,
+        date: document.getElementById('edit-date-input').value,
         isOutOfStock: document.getElementById('edit-is-outofstock').checked,
         isPaid: document.getElementById('edit-is-paid').checked,
-        note: document.getElementById('edit-note').value.trim(),
-        image: currentImageEditBase64,
-        updatedAt: new Date().toISOString()
+        note: document.getElementById('edit-note-input').value.trim(),
+        image: editFormState.image
       };
 
-      try {
-        await saveOrderDB(updatedOrder);
-        showToast('訂單修改成功！');
-        closeEditModal();
-        
-        updateHeaderStats();
-        renderOrdersList();
-        renderSettlementView();
-      } catch (e) {
-        showToast('修改失敗：' + e.message, 'error');
-      }
-    }
-
-    async function deleteOrderFromModal() {
-      const id = document.getElementById('edit-id').value;
-      await confirmDeleteOrder(id);
+      await saveOrderDB(updated);
       closeEditModal();
+      showToast('訂單已更新！', '✅');
+
+      if (currentTab === 'search') renderSearchTab();
+      if (currentTab === 'settlement') renderSettlementTab();
+      renderHeaderStats();
     }
 
-    async function confirmDeleteOrder(id) {
-      if (!confirm('確定要刪除這筆喊單紀錄嗎？刪除後無法復原。')) return;
-
-      try {
-        await deleteOrderDB(id);
+    async function confirmDeleteOrder(orderId) {
+      if (confirm('確定要刪除這筆團購紀錄嗎？')) {
+        await deleteOrderDB(orderId);
         showToast('訂單已成功刪除');
-        updateHeaderStats();
-        renderOrdersList();
-        renderSettlementView();
-      } catch (e) {
-        showToast('刪除失敗：' + e.message, 'error');
+        if (currentTab === 'search') renderSearchTab();
+        if (currentTab === 'settlement') renderSettlementTab();
+        renderHeaderStats();
       }
     }
 
-    // Quick inline out-of-stock toggle from settlement list
-    async function toggleInlineOutOfStock(orderId, isOut) {
-      const orders = await getAllOrdersDB();
-      const order = orders.find(o => o.id === orderId);
-      if (!order) return;
+    /* ==========================================================================
+       12. TAB 3: 月結對帳 (MONTHLY SETTLEMENT)
+       ========================================================================== */
+    async function renderSettlementTab() {
+      const allOrders = await getAllOrdersDB();
+      const orders = allOrders.map(normalizeOrder);
 
-      order.isOutOfStock = isOut;
-      order.updatedAt = new Date().toISOString();
-      
-      await saveOrderDB(order);
-      showToast(isOut ? '已標記為斷貨' : '已取消斷貨標記');
-      
-      updateHeaderStats();
-      renderOrdersList();
-      renderSettlementView();
-    }
+      const unpaidOrders = orders.filter(o => !o.isPaid);
+      const settledOrders = orders.filter(o => o.isPaid);
 
-    // -----------------------------------------------------------------
-    // MONTHLY SETTLEMENT & BATCHES (TAB 3)
-    // -----------------------------------------------------------------
-    async function renderSettlementView() {
-      const orders = await getAllOrdersDB();
-      const settlements = await getAllSettlementsDB();
+      // Calculate Total Unpaid Amount
+      const unpaidTotal = unpaidOrders.reduce((sum, o) => sum + (o.isOutOfStock ? 0 : (o.unitPrice * o.qty)), 0);
+      document.getElementById('settlement-unpaid-total').innerText = `$${unpaidTotal}`;
 
-      // Filter unpaid orders excluding 網購平台
-      const unpaidOrders = orders.filter(o => !o.isPaid && o.channel !== PLATFORM_CHANNEL);
-
-      // Grand total unpaid
-      let grandTotal = 0;
+      // Group unpaid orders by YYYY-MM and channel
+      const groups = {};
       unpaidOrders.forEach(o => {
-        if (!o.isOutOfStock) grandTotal += (o.price * o.qty);
-      });
-      document.getElementById('unpaid-grand-total').textContent = `$${grandTotal.toLocaleString()}`;
-
-      // Update Nav Badge
-      const navBadge = document.getElementById('nav-settle-badge');
-      if (unpaidOrders.length > 0) {
-        navBadge.classList.remove('hidden');
-      } else {
-        navBadge.classList.add('hidden');
-      }
-
-      // Group by YYYY-MM and Channel
-      const batchesMap = {};
-      unpaidOrders.forEach(o => {
-        const ym = o.date ? o.date.substring(0, 7) : '未定義月份';
+        const ym = o.date ? o.date.substring(0, 7) : '未指定月份';
         const key = `${ym}___${o.channel}`;
-        if (!batchesMap[key]) {
-          batchesMap[key] = {
-            yearMonth: ym,
-            channel: o.channel,
-            items: []
-          };
+        if (!groups[key]) {
+          groups[key] = { ym, channel: o.channel, items: [] };
         }
-        batchesMap[key].items.push(o);
+        groups[key].items.push(o);
       });
 
-      const unpaidContainer = document.getElementById('unpaid-batches-list');
-      const batchKeys = Object.keys(batchesMap);
+      const unpaidContainer = document.getElementById('unpaid-groups-container');
 
-      if (batchKeys.length === 0) {
+      if (Object.keys(groups).length === 0) {
         unpaidContainer.innerHTML = `
-          <div class="text-center py-12 text-slate-400 space-y-2">
-            <span class="text-4xl">🎉</span>
-            <p class="text-xs">太棒了！目前無任何未付清款項</p>
+          <div class="bg-white rounded-2xl p-8 text-center text-slate-400 space-y-2 border border-slate-100 shadow-sm">
+            <span class="text-4xl block">🎉</span>
+            <p class="text-xs font-bold text-slate-600">太棒了！所有團購訂單均已結清對帳！</p>
           </div>
         `;
       } else {
-        // Sort keys by Month descending
-        batchKeys.sort().reverse();
-
-        unpaidContainer.innerHTML = batchKeys.map(key => {
-          const batch = batchesMap[key];
-          let batchSubtotal = 0;
-          let activeCount = 0;
-
-          batch.items.forEach(item => {
-            if (!item.isOutOfStock) {
-              batchSubtotal += (item.price * item.qty);
-              activeCount++;
-            }
-          });
+        unpaidContainer.innerHTML = Object.entries(groups).map(([groupKey, group]) => {
+          const groupSubtotal = group.items.reduce((sum, item) => sum + (item.isOutOfStock ? 0 : (item.unitPrice * item.qty)), 0);
+          const safeKey = groupKey.replace(/[^a-zA-Z0-9]/g, '_');
 
           return `
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
-              
-              <!-- Batch Header -->
-              <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-                <div>
-                  <span class="px-2.5 py-1 bg-rose-50 text-rose-600 font-bold rounded-lg text-xs mr-2">${batch.channel}</span>
-                  <span class="text-xs font-bold text-slate-700">${batch.yearMonth} 月份對帳</span>
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100/90 space-y-3">
+              <!-- Group Header -->
+              <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-extrabold text-slate-800">${group.ym}</span>
+                  <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white">${group.channel}</span>
                 </div>
-                <div class="text-right">
-                  <span class="text-[10px] text-slate-400">小計</span>
-                  <div class="text-sm font-extrabold text-rose-600">$${batchSubtotal.toLocaleString()}</div>
-                </div>
+                <span class="text-xs text-slate-500 font-medium">共 ${group.items.length} 件商品</span>
               </div>
 
-              <!-- Item List -->
+              <!-- Group Items List -->
               <div class="space-y-2">
-                ${batch.items.map(item => {
-                  const isOut = item.isOutOfStock;
-                  return `
-                    <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
-                      <div class="flex items-center space-x-2.5 min-w-0 flex-1">
-                        <label class="flex items-center gap-1 cursor-pointer flex-shrink-0" title="切換斷貨狀態">
-                          <input type="checkbox" ${isOut ? 'checked' : ''} onchange="toggleInlineOutOfStock('${item.id}', this.checked)" class="w-4 h-4 text-rose-600 rounded">
-                          <span class="text-[10px] font-bold ${isOut ? 'text-slate-400' : 'text-slate-500'}">斷貨</span>
-                        </label>
-                        <div class="min-w-0 flex-1">
-                          <div class="font-bold text-slate-800 truncate ${isOut ? 'line-through text-slate-400' : ''}">${item.name}</div>
-                          <div class="text-[11px] text-slate-500">規格: ${item.spec || '無'} | $${item.price} x ${item.qty}</div>
-                        </div>
-                      </div>
+                ${group.items.map(item => `
+                  <div class="flex items-center gap-2.5 p-2 bg-slate-50/70 rounded-xl border border-slate-100 text-xs">
+                    ${item.image 
+                      ? `<img src="${item.image}" onclick="openLightbox('${item.image}', '${item.name}')" class="w-11 h-11 object-cover rounded-lg border border-slate-200 flex-shrink-0 cursor-pointer">`
+                      : `<div class="w-11 h-11 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-400 flex-shrink-0 text-base font-bold">🛍️</div>`
+                    }
+                    
+                    <div class="flex-1 min-w-0">
+                      <div class="font-bold text-slate-800 truncate ${item.isOutOfStock ? 'line-through text-slate-400' : ''}">${item.name}</div>
+                      <div class="text-[11px] text-slate-500">規格: ${item.spec || '預設'} (${item.date})</div>
+                    </div>
 
-                      <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
-                        <span class="font-extrabold ${isOut ? 'line-through text-slate-400' : 'text-slate-700'}">
-                          $${isOut ? 0 : (item.price * item.qty).toLocaleString()}
-                        </span>
-                        <!-- CLEARLY VISIBLE EDIT BUTTON -->
-                        <button onclick="openEditModal('${item.id}')" class="px-2 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-md font-bold text-[11px] flex items-center gap-0.5">
-                          ✏️ 編輯
+                    <div class="text-right flex-shrink-0 space-y-1">
+                      <div class="font-extrabold ${item.isOutOfStock ? 'line-through text-slate-400' : 'text-slate-800'}">
+                        ${item.isOutOfStock ? '$0' : `$${item.unitPrice * item.qty}`}
+                      </div>
+                      <div class="flex gap-1 justify-end">
+                        <button onclick="toggleStockStatus('${item.id}', ${!item.isOutOfStock})" class="px-1.5 py-0.5 rounded text-[10px] font-bold ${item.isOutOfStock ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-rose-100 hover:text-rose-600'}">
+                          ${item.isOutOfStock ? '取消斷貨' : '斷貨'}
                         </button>
+                        <button onclick="openEditModal('${item.id}')" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">✏️</button>
                       </div>
                     </div>
-                  `;
-                }).join('')}
+                  </div>
+                `).join('')}
               </div>
 
-              <!-- Batch Action -->
-              <div class="pt-1">
-                <button onclick="openBatchSettleModal('${batch.yearMonth}', '${batch.channel}', ${batchSubtotal}, ${activeCount}, '${encodeURIComponent(JSON.stringify(batch.items.map(i => i.id)))}')" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow transition">
-                  整批標記已付清 ($${batchSubtotal.toLocaleString()})
-                </button>
-              </div>
+              <!-- Group Settlement Calculation Footer -->
+              <div class="pt-2 border-t border-slate-100 space-y-2 bg-rose-50/40 p-3 rounded-xl">
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                  <div class="flex items-center gap-1">
+                    <span class="text-slate-500 font-medium">運費 (+):</span>
+                    <input type="number" id="shipping-${safeKey}" value="0" min="0" oninput="updateGroupTotal('${safeKey}', ${groupSubtotal})" class="w-16 p-1 border border-slate-200 rounded text-center font-bold bg-white">
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="text-slate-500 font-medium">折抵 (-):</span>
+                    <input type="number" id="discount-${safeKey}" value="0" min="0" oninput="updateGroupTotal('${safeKey}', ${groupSubtotal})" class="w-16 p-1 border border-slate-200 rounded text-center font-bold bg-white">
+                  </div>
+                </div>
 
+                <div class="flex justify-between items-center pt-1">
+                  <div>
+                    <span class="text-xs text-slate-600 font-bold block">應付總額</span>
+                    <span id="final-total-${safeKey}" class="text-base font-extrabold text-coral-600">$${groupSubtotal}</span>
+                  </div>
+                  <button onclick="settleGroup('${groupKey}', '${safeKey}')" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow transition">
+                    一鍵全數結清 ✅
+                  </button>
+                </div>
+              </div>
             </div>
           `;
         }).join('');
       }
 
-      // Render History View
-      renderHistorySettlements(settlements);
-    }
-
-    function renderHistorySettlements(settlements) {
-      const historyContainer = document.getElementById('history-settlements-list');
-      
-      if (!settlements || settlements.length === 0) {
-        historyContainer.innerHTML = `
-          <div class="text-center py-12 text-slate-400 space-y-2">
-            <span class="text-4xl">📜</span>
-            <p class="text-xs">尚無已完成的對帳紀錄</p>
-          </div>
-        `;
-        return;
-      }
-
-      settlements.sort((a, b) => new Date(b.paidDate || b.createdAt) - new Date(a.paidDate || a.createdAt));
-
-      historyContainer.innerHTML = settlements.map(s => `
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
-          
-          <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-            <div>
-              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded text-xs mr-1.5">${s.channel}</span>
-              <span class="text-xs font-bold text-slate-700">${s.yearMonth} 月對帳單</span>
-            </div>
-            <div class="text-right">
-              <span class="text-[10px] text-slate-400">實付總額</span>
-              <div class="text-sm font-extrabold text-emerald-600">$${(s.finalTotal || 0).toLocaleString()}</div>
+      // Settled items history
+      document.getElementById('settled-count').innerText = settledOrders.length;
+      const settledContainer = document.getElementById('settled-list');
+      settledContainer.innerHTML = settledOrders.map(o => `
+        <div class="flex items-center justify-between p-2 bg-slate-50 rounded-xl text-xs border border-slate-100">
+          <div class="flex items-center gap-2 min-w-0">
+            ${o.image ? `<img src="${o.image}" onclick="openLightbox('${o.image}', '${o.name}')" class="w-8 h-8 rounded object-cover cursor-pointer">` : ''}
+            <div class="truncate">
+              <span class="font-bold text-slate-700">${o.name}</span>
+              <span class="text-[10px] text-slate-400 block">${o.channel} | ${o.date}</span>
             </div>
           </div>
-
-          <div class="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl">
-            <div>商品小計: <strong>$${(s.subtotal || 0).toLocaleString()}</strong></div>
-            <div>運費: <strong>+$${s.shipping || 0}</strong></div>
-            <div>購物金/折抵: <strong>-$${s.discount || 0}</strong></div>
-            <div>付款日期: <strong>${s.paidDate || '未註明'}</strong></div>
-            ${s.note ? `<div class="col-span-2 text-[11px] text-slate-400 border-t border-slate-200/50 pt-1 mt-1">備註: ${s.note}</div>` : ''}
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="font-extrabold text-slate-700">$${o.isOutOfStock ? 0 : o.unitPrice * o.qty}</span>
+            <button onclick="unsettleOrder('${o.id}')" class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 hover:bg-amber-100 font-bold">退回未付款</button>
           </div>
-
-          <div class="flex justify-between items-center pt-1 text-xs">
-            <span class="text-[11px] text-slate-400">內含 ${s.itemIds ? s.itemIds.length : 0} 筆品項</span>
-            <button onclick="revertSettlementBatch('${s.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-lg transition text-xs flex items-center gap-1">
-              ↩️ 退回未付款
-            </button>
-          </div>
-
         </div>
       `).join('');
     }
 
-    // -----------------------------------------------------------------
-    // BATCH SETTLEMENT MODAL LOGIC
-    // -----------------------------------------------------------------
-    function openBatchSettleModal(yearMonth, channel, subtotal, itemCounts, itemIdsJson) {
-      const itemIds = JSON.parse(decodeURIComponent(itemIdsJson));
-
-      currentBatchSettleData = {
-        yearMonth,
-        channel,
-        subtotal,
-        itemIds
-      };
-
-      document.getElementById('settle-modal-channel').textContent = channel;
-      document.getElementById('settle-modal-month').textContent = yearMonth;
-      document.getElementById('settle-modal-item-count').textContent = itemCounts;
-      document.getElementById('settle-modal-subtotal').textContent = `$${subtotal.toLocaleString()}`;
-
-      document.getElementById('settle-shipping').value = '0';
-      document.getElementById('settle-discount').value = '0';
-      document.getElementById('settle-pay-date').valueAsDate = new Date();
-      document.getElementById('settle-note').value = '';
-
-      calculateFinalSettleTotal();
-      document.getElementById('modal-batch-settle').classList.remove('hidden');
+    function updateGroupTotal(safeKey, subtotal) {
+      const ship = Number(document.getElementById(`shipping-${safeKey}`).value || 0);
+      const disc = Number(document.getElementById(`discount-${safeKey}`).value || 0);
+      const finalVal = Math.max(0, subtotal + ship - disc);
+      document.getElementById(`final-total-${safeKey}`).innerText = `$${finalVal}`;
     }
 
-    function calculateFinalSettleTotal() {
-      if (!currentBatchSettleData) return;
-
-      const subtotal = currentBatchSettleData.subtotal;
-      const shipping = parseFloat(document.getElementById('settle-shipping').value) || 0;
-      const discount = parseFloat(document.getElementById('settle-discount').value) || 0;
-
-      const finalTotal = Math.max(0, subtotal + shipping - discount);
-      document.getElementById('settle-modal-final-total').textContent = `$${finalTotal.toLocaleString()}`;
-    }
-
-    function closeBatchSettleModal() {
-      document.getElementById('modal-batch-settle').classList.add('hidden');
-      currentBatchSettleData = null;
-    }
-
-    async function confirmBatchSettle() {
-      if (!currentBatchSettleData) return;
-
-      const { yearMonth, channel, subtotal, itemIds } = currentBatchSettleData;
-      const shipping = parseFloat(document.getElementById('settle-shipping').value) || 0;
-      const discount = parseFloat(document.getElementById('settle-discount').value) || 0;
-      const paidDate = document.getElementById('settle-pay-date').value;
-      const note = document.getElementById('settle-note').value.trim();
-      const finalTotal = Math.max(0, subtotal + shipping - discount);
-
-      // Update all orders in batch to isPaid = true
-      const orders = await getAllOrdersDB();
-      for (const id of itemIds) {
-        const order = orders.find(o => o.id === id);
-        if (order) {
-          order.isPaid = true;
-          order.updatedAt = new Date().toISOString();
-          await saveOrderDB(order);
-        }
+    async function toggleStockStatus(orderId, newOutOfStockState) {
+      const allOrders = await getAllOrdersDB();
+      const target = allOrders.find(o => o.id === orderId);
+      if (target) {
+        target.isOutOfStock = newOutOfStockState;
+        await saveOrderDB(target);
+        showToast(newOutOfStockState ? '已標記為斷貨 ($0)' : '已恢復商品計價');
+        renderSettlementTab();
+        renderHeaderStats();
       }
-
-      // Save settlement record
-      const settlementRecord = {
-        id: 'set_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-        yearMonth,
-        channel,
-        subtotal,
-        shipping,
-        discount,
-        finalTotal,
-        paidDate,
-        note,
-        itemIds,
-        createdAt: new Date().toISOString()
-      };
-
-      await saveSettlementDB(settlementRecord);
-
-      showToast(`【${channel} ${yearMonth}】已完成結帳對帳！`);
-      closeBatchSettleModal();
-
-      updateHeaderStats();
-      renderOrdersList();
-      renderSettlementView();
     }
 
-    // Revert Settled Batch back to unpaid
-    async function revertSettlementBatch(settlementId) {
-      if (!confirm('確定要退回此筆對帳紀錄嗎？所有包含的訂單將恢復為未付款狀態。')) return;
+    async function settleGroup(groupKey, safeKey) {
+      const allOrders = await getAllOrdersDB();
+      const [ym, channel] = groupKey.split('___');
 
-      const settlements = await getAllSettlementsDB();
-      const record = settlements.find(s => s.id === settlementId);
-      if (!record) return;
+      const todayStr = new Date().toISOString().split('T')[0];
 
-      const orders = await getAllOrdersDB();
-      if (record.itemIds && record.itemIds.length > 0) {
-        for (const id of record.itemIds) {
-          const order = orders.find(o => o.id === id);
-          if (order) {
-            order.isPaid = false;
-            order.updatedAt = new Date().toISOString();
-            await saveOrderDB(order);
-          }
+      const updated = allOrders.map(raw => {
+        const o = normalizeOrder(raw);
+        const itemYm = o.date ? o.date.substring(0, 7) : '';
+        if (!o.isPaid && itemYm === ym && o.channel === channel) {
+          return {
+            ...o,
+            isPaid: true,
+            settlementDate: todayStr
+          };
         }
-      }
+        return o;
+      });
 
-      await deleteSettlementDB(settlementId);
-      showToast('已恢復為未付款狀態');
-
-      updateHeaderStats();
-      renderOrdersList();
-      renderSettlementView();
+      await bulkSaveOrdersDB(updated);
+      showToast(`已全數結清 [${channel}] ${ym} 的團購帳款！`, '🎉');
+      renderSettlementTab();
+      renderHeaderStats();
     }
 
-    // -----------------------------------------------------------------
-    // GEMINI SCREENSHOT AI INTEGRATION
-    // -----------------------------------------------------------------
+    async function unsettleOrder(orderId) {
+      const allOrders = await getAllOrdersDB();
+      const target = allOrders.find(o => o.id === orderId);
+      if (target) {
+        target.isPaid = false;
+        target.settlementDate = null;
+        await saveOrderDB(target);
+        showToast('已退回至未付款明細');
+        renderSettlementTab();
+        renderHeaderStats();
+      }
+    }
+
+    function toggleSettledHistory() {
+      const list = document.getElementById('settled-list');
+      const arrow = document.getElementById('settled-arrow');
+      if (list.classList.contains('hidden')) {
+        list.classList.remove('hidden');
+        arrow.innerText = '▲ 收起';
+      } else {
+        list.classList.add('hidden');
+        arrow.innerText = '▼ 展開';
+      }
+    }
+
+    /* ==========================================================================
+       13. TAB 4: SETTINGS, BACKUP & RESTORE
+       ========================================================================== */
+    function loadGeminiStatus() {
+      const key = localStorage.getItem('dib_gemini_key') || '';
+      const statusEl = document.getElementById('gemini-status');
+      if (key) {
+        statusEl.innerHTML = `<span class="text-emerald-600 font-bold">已設定 (Key: ${key.substr(0, 6)}...${key.substr(-4)})</span>`;
+        document.getElementById('gemini-key-input').value = key;
+      } else {
+        statusEl.innerHTML = `<span class="text-slate-400">未設定 API Key</span>`;
+      }
+    }
+
     function saveGeminiKey() {
-      const key = document.getElementById('setting-gemini-key').value.trim();
-      if (!key) {
-        localStorage.removeItem('did_i_buy_gemini_key');
-        document.getElementById('btn-ai-parse').classList.add('hidden');
-        showToast('已移除 API Key');
-        return;
+      const val = document.getElementById('gemini-key-input').value.trim();
+      if (val) {
+        localStorage.setItem('dib_gemini_key', val);
+        showToast('Gemini API Key 儲存成功！');
+      } else {
+        localStorage.removeItem('dib_gemini_key');
+        showToast('已清除 Gemini Key');
       }
-      localStorage.setItem('did_i_buy_gemini_key', key);
-      document.getElementById('btn-ai-parse').classList.remove('hidden');
-      showToast('Gemini API Key 儲存成功');
+      loadGeminiStatus();
     }
 
-    function triggerAiParse() {
-      const apiKey = localStorage.getItem('did_i_buy_gemini_key');
+    function clearGeminiKey() {
+      localStorage.removeItem('dib_gemini_key');
+      document.getElementById('gemini-key-input').value = '';
+      loadGeminiStatus();
+      showToast('已清除 Gemini API Key');
+    }
+
+    function renderSettingsChannels() {
+      const container = document.getElementById('settings-channels-list');
+      container.innerHTML = channels.map((c, idx) => `
+        <div class="flex items-center gap-1 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">
+          <span>${c}</span>
+          <button onclick="removeChannel(${idx})" class="text-slate-400 hover:text-rose-500 ml-1">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function addNewChannel() {
+      const input = document.getElementById('new-channel-name');
+      const val = input.value.trim();
+      if (!val) return;
+      if (channels.includes(val)) {
+        showToast('此渠道已存在！', '⚠️');
+        return;
+      }
+      channels.push(val);
+      saveChannels();
+      input.value = '';
+      showToast(`已新增購買渠道「${val}」`);
+    }
+
+    function removeChannel(idx) {
+      const removed = channels.splice(idx, 1);
+      saveChannels();
+      showToast(`已移除購買渠道「${removed[0]}」`);
+    }
+
+    /* Backup Export */
+    async function exportBackupJSON() {
+      const orders = await getAllOrdersDB();
+      const backupData = {
+        version: '2.5.0',
+        exportDate: new Date().toISOString(),
+        channels: channels,
+        orders: orders
+      };
+
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().split('T')[0];
+      a.href = url;
+      a.download = `did-i-buy-this-backup-${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`備份成功匯出！共 ${orders.length} 筆訂單`, '📥');
+    }
+
+    /* Backup Import (iOS Safari safe input file handler) */
+    function importBackupJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const content = e.target.result;
+          await processImportContent(content);
+        } catch (err) {
+          showToast('匯入失敗: 無法解析備份檔 (' + err.message + ')', '❌');
+        } finally {
+          event.target.value = ''; // Reset input element
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    async function importTextBackup() {
+      const content = document.getElementById('import-text-area').value.trim();
+      if (!content) {
+        showToast('請先貼上備份內容！', '⚠️');
+        return;
+      }
+      try {
+        await processImportContent(content);
+        document.getElementById('import-text-area').value = '';
+      } catch (err) {
+        showToast('文字還原失敗: ' + err.message, '❌');
+      }
+    }
+
+    async function processImportContent(jsonString) {
+      const parsed = JSON.parse(jsonString);
+      let rawOrders = [];
+
+      if (Array.isArray(parsed)) {
+        rawOrders = parsed;
+      } else if (parsed.orders && Array.isArray(parsed.orders)) {
+        rawOrders = parsed.orders;
+        if (parsed.channels && Array.isArray(parsed.channels)) {
+          channels = Array.from(new Set([...channels, ...parsed.channels]));
+          saveChannels();
+        }
+      }
+
+      if (rawOrders.length === 0) {
+        showToast('備份檔中未發現任何訂單紀錄', '⚠️');
+        return;
+      }
+
+      // Normalize every imported order to guarantee photo & category preservation
+      const normalizedList = rawOrders.map(normalizeOrder);
+      await bulkSaveOrdersDB(normalizedList);
+
+      const photoCount = normalizedList.filter(o => o.image).length;
+      showToast(`成功還原 ${normalizedList.length} 筆訂單 (包含 ${photoCount} 張商品照片)！`, '🎉');
+
+      renderHeaderStats();
+      if (currentTab === 'search') renderSearchTab();
+      if (currentTab === 'settlement') renderSettlementTab();
+    }
+
+    async function clearAllData() {
+      if (confirm('⚠️ 警告：確定要清空本機所有團購訂單嗎？')) {
+        if (confirm('🚨 再次確認：清空後將無法復原，請確保您已匯出備份！')) {
+          await clearOrdersDB();
+          showToast('已清空本機所有訂單資料');
+          renderHeaderStats();
+          if (currentTab === 'search') renderSearchTab();
+          if (currentTab === 'settlement') renderSettlementTab();
+        }
+      }
+    }
+
+    /* ==========================================================================
+       14. GEMINI AI VISION INTEGRATION
+       ========================================================================== */
+    async function triggerGeminiAI(target) {
+      const apiKey = localStorage.getItem('dib_gemini_key') || '';
       if (!apiKey) {
-        showToast('請先至「設定」頁面輸入 Gemini API Key', 'error');
+        showToast('請先至「設定」頁面填寫 Gemini API Key！', '⚠️');
+        switchTab('settings');
         return;
       }
-      document.getElementById('add-img-input').click();
-    }
 
-    async function processAiParseFromBase64(base64Data) {
-      const apiKey = localStorage.getItem('did_i_buy_gemini_key');
-      if (!apiKey) return;
+      const imgB64 = target === 'add' ? addFormState.image : editFormState.image;
+      if (!imgB64) {
+        showToast('請先選擇或貼上商品圖片！', '⚠️');
+        return;
+      }
 
-      showToast('🤖 AI 正辨識喊單截圖中...', 'warning');
-
-      const pureBase64 = base64Data.replace(/^data:image\/(png|jpeg|webp);base64,/, '');
-
-      const promptText = `你是一個團購訂單截圖解析助手。請從這張圖片中提取商品訂單資訊，並僅輸出以下標準 JSON 格式（不要有 markdown codeblock，不要有額外文字）：
-{
-  "name": "商品名稱 (請自動剔除賣家編號如1589J*)",
-  "price": 數字價格,
-  "qty": 數量數字,
-  "spec": "規格或尺寸顏色",
-  "channel": "購買渠道名稱如Moby/Mina"
-}`;
+      const btn = document.getElementById(`ai-btn-${target}`);
+      const oldHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `✨ 辨識中...`;
+      }
 
       try {
+        const base64Data = imgB64.split(',')[1] || imgB64;
+        const promptText = `你是一個團購訂單辨識助手。請分析這張商品圖片或截圖，擷取以下JSON結構:
+{
+  "name": "商品名稱 (去除開頭淨化編號如 1589J* 或 貳六_11團)",
+  "spec": "顏色/尺寸/規格 (如 白色 L)",
+  "unitPrice": 數字單價 (如 390，只填數字),
+  "qty": 數量 (數字),
+  "mainCategory": "女兒" 或 "兒子" 或 "自用" 或 "家用",
+  "subCategory": "子分類名稱"
+}
+只返回純 JSON，不要 Markdown 標記或其他文字。`;
+
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1874,237 +1807,45 @@
             contents: [{
               parts: [
                 { text: promptText },
-                { inline_data: { mime_type: "image/jpeg", data: pureBase64 } }
+                { inline_data: { mime_type: "image/jpeg", data: base64Data } }
               ]
             }]
           })
         });
 
         const data = await response.json();
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        if (rawText) {
-          const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-          const parsed = JSON.parse(cleanJson);
+        const textRes = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const cleanJson = textRes.replace(/```json/g, '').replace(/```/g, '').trim();
+        const result = JSON.parse(cleanJson);
 
-          if (parsed.name) document.getElementById('add-name').value = parsed.name;
-          if (parsed.price) document.getElementById('add-price').value = parsed.price;
-          if (parsed.qty) document.getElementById('add-qty').value = parsed.qty;
-          if (parsed.spec) document.getElementById('add-spec').value = parsed.spec;
-          if (parsed.channel) {
-            const channels = getStoredChannels();
-            if (channels.includes(parsed.channel)) {
-              selectChannel('add', parsed.channel);
-            }
+        if (target === 'add') {
+          if (result.name) {
+            document.getElementById('add-name-input').value = result.name;
+            addFormState.name = result.name;
           }
-          
-          onAddFormChange();
-          showToast('✨ 截圖辨識完成，已自動填入！');
+          if (result.spec) document.getElementById('add-spec-input').value = result.spec;
+          if (result.unitPrice) document.getElementById('add-price-input').value = result.unitPrice;
+          if (result.qty) document.getElementById('add-qty-input').value = result.qty;
+          if (result.mainCategory && CATEGORIES[result.mainCategory]) {
+            document.getElementById('add-main-cat').value = result.mainCategory;
+            onMainCatChange('add', result.mainCategory);
+            if (result.subCategory) document.getElementById('add-sub-cat').value = result.subCategory;
+          }
+          checkDuplicateWarning();
         }
+
+        showToast('✨ AI 成功自動填入商品資訊！', '🎉');
+
       } catch (err) {
-        console.error(err);
-        showToast('AI 辨識失敗，請手動填寫', 'error');
-      }
-    }
-
-    // -----------------------------------------------------------------
-    // BACKUP & RESTORE DATA (INDEXEDDB SAFE & iOS COMPATIBLE)
-    // -----------------------------------------------------------------
-    // Backward-compatible normalizer for custom/imported JSON format
-    function normalizeOrder(raw) {
-      let mainCat = raw.mainCategory || raw.category || raw.cat1 || '自用';
-      let subCat = raw.subCategory || raw.subcategory || raw.cat2 || '其他';
-
-      if (raw.category && raw.category.includes('-')) {
-        const parts = raw.category.split('-');
-        mainCat = parts[0];
-        subCat = parts[1] || '其他';
-      }
-
-      if (!CATEGORIES[mainCat]) mainCat = '自用';
-      if (!CATEGORIES[mainCat].includes(subCat)) subCat = CATEGORIES[mainCat][0] || '其他';
-
-      return {
-        id: raw.id || ('ord_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7)),
-        channel: raw.channel || DEFAULT_CHANNELS[0],
-        name: raw.name || '未命名商品',
-        spec: raw.spec || '',
-        price: parseFloat(raw.price) || 0,
-        qty: parseInt(raw.qty) || 1,
-        mainCategory: mainCat,
-        subCategory: subCat,
-        date: raw.date || new Date().toISOString().substring(0, 10),
-        isOutOfStock: !!(raw.isOutOfStock || raw.outOfStock),
-        isPaid: !!(raw.isPaid || raw.paid),
-        note: raw.note || '',
-        image: raw.image || null,
-        createdAt: raw.createdAt || new Date().toISOString(),
-        updatedAt: raw.updatedAt || new Date().toISOString()
-      };
-    }
-
-    async function exportBackupJSON() {
-      const orders = await getAllOrdersDB();
-      const settlements = await getAllSettlementsDB();
-      const channels = getStoredChannels();
-
-      const backupData = {
-        version: 2,
-        exportDate: new Date().toISOString(),
-        channels,
-        orders,
-        settlements
-      };
-
-      const jsonStr = JSON.stringify(backupData, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `did-i-buy-this-backup-${new Date().toISOString().substring(0,10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      showToast('JSON 備份檔案已成功匯出');
-    }
-
-    function importBackupJSON(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async function(e) {
-        try {
-          const data = JSON.parse(e.target.result);
-          await processImportedData(data);
-          event.target.value = ''; // Reset input so same file can be chosen again
-        } catch (err) {
-          showToast('讀取備份檔案失敗：JSON 格式錯誤', 'error');
+        showToast('AI 識圖失敗: ' + err.message, '❌');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = oldHtml;
         }
-      };
-      reader.readAsText(file);
-    }
-
-    function importBackupFromText() {
-      const text = document.getElementById('setting-backup-text').value.trim();
-      if (!text) {
-        showToast('請貼上 JSON 備份內容', 'error');
-        return;
-      }
-      try {
-        const data = JSON.parse(text);
-        processImportedData(data);
-      } catch (err) {
-        showToast('JSON 格式錯誤，請檢查文字內容', 'error');
       }
     }
 
-    async function processImportedData(data) {
-      if (!data) return;
-
-      let rawOrders = [];
-      let rawSettlements = [];
-
-      if (Array.isArray(data)) {
-        rawOrders = data;
-      } else {
-        if (data.channels && Array.isArray(data.channels)) {
-          saveStoredChannels(data.channels);
-        }
-        if (data.orders && Array.isArray(data.orders)) rawOrders = data.orders;
-        if (data.settlements && Array.isArray(data.settlements)) rawSettlements = data.settlements;
-      }
-
-      let importedCount = 0;
-      for (const item of rawOrders) {
-        const normalized = normalizeOrder(item);
-        await saveOrderDB(normalized);
-        importedCount++;
-      }
-
-      for (const set of rawSettlements) {
-        await saveSettlementDB(set);
-      }
-
-      showToast(`成功還原 ${importedCount} 筆訂單資料！`);
-      
-      updateHeaderStats();
-      renderOrdersList();
-      renderSettlementView();
-    }
-
-    async function copyBackupToClipboard() {
-      const orders = await getAllOrdersDB();
-      const settlements = await getAllSettlementsDB();
-      const channels = getStoredChannels();
-
-      const backupData = {
-        version: 2,
-        exportDate: new Date().toISOString(),
-        channels,
-        orders,
-        settlements
-      };
-
-      const jsonStr = JSON.stringify(backupData);
-      document.getElementById('setting-backup-text').value = jsonStr;
-
-      try {
-        const el = document.getElementById('setting-backup-text');
-        el.select();
-        document.execCommand('copy');
-        showToast('已將備份文字複製至剪貼簿！');
-      } catch (e) {
-        showToast('複製失敗，請手動複製文字框內容', 'warning');
-      }
-    }
-
-    async function clearAllData() {
-      if (!confirm('⚠️ 警告：確定要刪除所有訂單與對帳紀錄嗎？此動作無法復原！')) return;
-      if (!confirm('⚠️ 請再次確認：是否真的要清除所有資料？')) return;
-
-      const orders = await getAllOrdersDB();
-      for (const o of orders) await deleteOrderDB(o.id);
-
-      const settlements = await getAllSettlementsDB();
-      for (const s of settlements) await deleteSettlementDB(s.id);
-
-      showToast('所有資料已成功清除');
-      
-      updateHeaderStats();
-      renderOrdersList();
-      renderSettlementView();
-    }
-
-    // -----------------------------------------------------------------
-    // HEADER METRICS UPDATER
-    // -----------------------------------------------------------------
-    async function updateHeaderStats() {
-      const orders = await getAllOrdersDB();
-      const unpaidCount = orders.filter(o => !o.isPaid && !o.isOutOfStock && o.channel !== PLATFORM_CHANNEL).length;
-      
-      const statsEl = document.getElementById('quick-stats');
-      statsEl.innerHTML = `
-        <div>總喊單: <span class="font-bold text-slate-700">${orders.length}</span> 筆</div>
-        <div>待對帳: <span class="font-bold text-rose-600">${unpaidCount}</span> 筆</div>
-      `;
-    }
-
-    // Register Service Worker for PWA
-    if ('serviceWorker' in navigator) {
-      const swCode = `
-        self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
-        self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-        self.addEventListener('fetch', e => {
-          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-        });
-      `;
-      const blob = new Blob([swCode], { type: 'application/javascript' });
-      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
-    }
   </script>
 </body>
 </html>
