@@ -4,15 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>did-i-buy-this | 團購助手</title>
-
-  <!-- PWA & Mobile Meta Tags -->
+  
+  <!-- PWA Meta Tags -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f43f5e'/><text y='65' x='50' font-size='50' text-anchor='middle' fill='white'>🦛</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f43f5e'/><text y='65' x='50' font-size='50' text-anchor='middle' fill='white'>🦛</text></svg>">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="團購助手">
-  <link rel="apple-touch-icon" href="icon.png">
-  <link rel="icon" type="image/png" href="icon.png">
+  <meta name="theme-color" content="#fff1f2">
 
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -20,11 +21,13 @@
         extend: {
           colors: {
             brand: {
-              50: '#fdf4f6',
-              100: '#fbe8eb',
-              500: '#e11d48',
-              600: '#be123c',
-              700: '#9f1239',
+              50: '#fff1f2',
+              100: '#ffe4e6',
+              200: '#fecdd3',
+              400: '#fb7185',
+              500: '#f43f5e',
+              600: '#e11d48',
+              700: '#be123c',
             }
           }
         }
@@ -32,472 +35,145 @@
     }
   </script>
 
-  <!-- Custom CSS for iOS Safari Date Input Fix & Animations -->
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
-
-    /* iOS Safari Date Input Bug Fix */
+    
+    /* iOS Safari Date Input Overflow & Styling Fix */
     input[type="date"] {
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-      display: block;
-      width: 100%;
-      max-width: 100%;
-      min-width: 0;
-      box-sizing: border-box;
-      background-color: #f8fafc;
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      display: block !important;
+      background-color: #ffffff;
     }
 
-    /* Custom scrollbars */
-    ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
+    /* Custom scrollbar for horizontal pill lists */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
     }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-
-    /* Safe bottom area padding for modern iPhones */
-    .pb-safe-bottom {
-      padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-32 select-none">
 
-  <!-- Toast Notification Header -->
-  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-4">
-    <div id="toast-content" class="bg-slate-900 text-white text-sm px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
-      <span id="toast-icon">✨</span>
-      <span id="toast-msg">提示訊息</span>
+  <!-- App Header -->
+  <header class="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-rose-100 shadow-sm px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-2">
+      <span class="text-2xl">🦛</span>
+      <div>
+        <h1 class="text-base font-bold text-slate-800 leading-tight">did-i-buy-this</h1>
+        <p class="text-[11px] font-semibold text-rose-500">團購防重買與對帳助手</p>
+      </div>
     </div>
-  </div>
+    <div id="quick-stats" class="text-right text-xs text-slate-500 font-medium">
+      <!-- Dynamic header metrics -->
+    </div>
+  </header>
 
-  <!-- Main Container -->
-  <div class="flex-1 max-w-md w-full mx-auto bg-slate-50 min-h-screen flex flex-col shadow-sm relative pb-28">
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm pointer-events-none flex flex-col space-y-2"></div>
 
-    <!-- Header -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-3 flex items-center justify-between shadow-sm">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-          🛍️
+  <!-- Main View Container -->
+  <main class="max-w-md mx-auto p-4">
+
+    <!-- TAB 1: 記一筆 (ADD ORDER) -->
+    <section id="tab-add" class="tab-content space-y-4">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 space-y-4">
+        
+        <!-- Header & Screenshot AI -->
+        <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-1.5">
+            <span>📝</span> 新增喊單紀錄
+          </h2>
+          <button id="btn-ai-parse" onclick="triggerAiParse()" class="hidden text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold px-2.5 py-1 rounded-full border border-rose-200 transition flex items-center gap-1">
+            <span>✨</span> 截圖辨識填單
+          </button>
         </div>
+
+        <!-- Image Upload & Preview -->
         <div>
-          <h1 class="text-base font-bold leading-tight text-slate-800">did-i-buy-this</h1>
-          <p class="text-[10px] text-slate-400 font-medium">團購防重複與月結助手</p>
-        </div>
-      </div>
-      <div class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium" id="header-stat">
-        載入中...
-      </div>
-    </header>
-
-    <!-- Content Sections -->
-    <main class="flex-1 p-4 overflow-y-auto">
-
-      <!-- TAB 1: 記一筆 (ADD ORDER) -->
-      <section id="tab-add" class="tab-content space-y-4">
-        
-        <!-- Image & AI Auto-fill Banner -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">1. 商品圖片與 AI 辨識</label>
-          <div class="flex items-center gap-3">
-            <div id="img-preview-container" class="w-20 h-20 rounded-xl bg-slate-100 border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 overflow-hidden relative group shrink-0">
-              <span class="text-xl">📷</span>
-              <span class="text-[10px] mt-0.5">上傳圖片</span>
-              <img id="img-preview" class="hidden w-full h-full object-cover absolute inset-0" alt="預覽圖">
-              <button type="button" id="btn-remove-img" onclick="removeImage()" class="hidden absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs items-center justify-center shadow">✕</button>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">商品圖片 (選填)</label>
+          <div class="flex items-center space-x-3">
+            <div id="add-img-preview-box" class="w-20 h-20 bg-slate-100 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 overflow-hidden relative group">
+              <span class="text-2xl">📷</span>
+              <span class="text-[10px] mt-1">點擊上傳</span>
+              <img id="add-img-preview" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl" alt="Preview">
             </div>
-            <input type="file" id="input-image" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+            <input type="file" id="add-img-input" accept="image/*" class="hidden" onchange="handleImageUpload(event, 'add')">
             
-            <div class="flex-1 space-y-2 min-w-0">
-              <button type="button" onclick="document.getElementById('input-image').click()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200">
-                <span>📁</span> 選擇商品截圖 / 拍照
+            <div class="flex-1 space-y-1.5">
+              <button type="button" onclick="document.getElementById('add-img-input').click()" class="w-full text-xs py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg border border-slate-200 transition">
+                選擇圖片 / 拍照
               </button>
-              <button type="button" onclick="runAiAnalysis()" id="btn-ai-analyze" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-xs font-semibold py-2 px-3 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
-                <span>✨</span> AI 截圖自動填表
+              <button type="button" id="btn-remove-add-img" onclick="clearImage('add')" class="hidden w-full text-xs py-1.5 text-rose-500 font-medium hover:underline">
+                移除圖片
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Form Fields Card -->
-        <form id="form-add-order" onsubmit="handleFormSubmit(event)" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-4">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">2. 填寫訂單詳細資料</label>
-            <span class="text-[11px] text-slate-400">*為必填項目</span>
-          </div>
-
-          <!-- 品項名稱 & Duplicate Warning -->
-          <div class="space-y-1 min-w-0">
-            <label class="block text-xs font-semibold text-slate-700">品項名稱 <span class="text-rose-500">*</span></label>
-            <input type="text" id="add-name" required oninput="onProductNameInput()" placeholder="例如：韓版女童蕾絲襯衫" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-            
-            <!-- Real-time Duplicate Alert Panel -->
-            <div id="duplicate-warning" class="hidden mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1.5 text-amber-800 text-xs font-bold">
-                  <span>⚠️</span>
-                  <span>發現可能的歷史喊單紀錄！</span>
-                </div>
-                <div class="flex items-center gap-1 text-[11px]">
-                  <span class="text-amber-600 font-medium">範圍:</span>
-                  <select id="dup-range" onchange="onProductNameInput()" class="bg-amber-100/80 border border-amber-300 text-amber-900 rounded px-1 py-0.5 text-[11px] focus:outline-none">
-                    <option value="1">1個月</option>
-                    <option value="3" selected>3個月</option>
-                    <option value="6">6個月</option>
-                    <option value="12">1年</option>
-                    <option value="999">全部</option>
-                  </select>
-                </div>
-              </div>
-              <div id="duplicate-items-list" class="space-y-1.5 max-h-36 overflow-y-auto">
-                <!-- Duplicate cards inserted here -->
-              </div>
-            </div>
-          </div>
-
-          <!-- 規格 & 數量 -->
-          <div class="grid grid-cols-3 gap-3">
-            <div class="col-span-2 space-y-1 min-w-0">
-              <label class="block text-xs font-semibold text-slate-700">規格 / 顏色 / 尺寸</label>
-              <input type="text" id="add-spec" oninput="autoSelectCategoryByText()" placeholder="例如：白色 130cm" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-            </div>
-            <div class="space-y-1 min-w-0">
-              <label class="block text-xs font-semibold text-slate-700">數量 <span class="text-rose-500">*</span></label>
-              <input type="number" id="add-qty" min="1" value="1" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-            </div>
-          </div>
-
-          <!-- 單價 -->
-          <div class="space-y-1 min-w-0">
-            <label class="block text-xs font-semibold text-slate-700">單價 (NT$) <span class="text-rose-500">*</span></label>
-            <input type="number" id="add-price" min="0" step="1" required placeholder="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-          </div>
-
-          <!-- 購買渠道 (Quick Select Pills) -->
-          <div class="space-y-1.5 min-w-0">
-            <label class="block text-xs font-semibold text-slate-700">購買渠道 <span class="text-rose-500">*</span></label>
-            <div id="channel-pills" class="flex flex-wrap gap-1.5">
-              <!-- Channel pill buttons inserted dynamically -->
-            </div>
-            <input type="hidden" id="add-channel" required>
-          </div>
-
-          <!-- 分類 (大分類 + 子分類) -->
-          <div class="grid grid-cols-2 gap-3">
-            <div class="space-y-1 min-w-0">
-              <label class="block text-xs font-semibold text-slate-700">大分類 <span class="text-rose-500">*</span></label>
-              <select id="add-main-cat" onchange="updateSubCategoryDropdown('add')" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-                <option value="女兒">女兒</option>
-                <option value="兒子">兒子</option>
-                <option value="自用">自用</option>
-                <option value="家用">家用</option>
-              </select>
-            </div>
-            <div class="space-y-1 min-w-0">
-              <label class="block text-xs font-semibold text-slate-700">子分類 <span class="text-rose-500">*</span></label>
-              <select id="add-sub-cat" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-                <!-- Dynamically updated -->
-              </select>
-            </div>
-          </div>
-
-          <!-- 喊單日期 (Strictly Full Width & Fix iOS Safari Overflow) -->
-          <div class="space-y-1 w-full min-w-0 overflow-hidden">
-            <label class="block text-xs font-semibold text-slate-700">喊單日期 <span class="text-rose-500">*</span></label>
-            <div class="w-full min-w-0">
-              <input type="date" id="add-date" required class="w-full min-w-0 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-            </div>
-          </div>
-
-          <!-- 備註 -->
-          <div class="space-y-1 min-w-0">
-            <label class="block text-xs font-semibold text-slate-700">備註 (可選)</label>
-            <input type="text" id="add-notes" placeholder="例如：等下一批折扣、送人用" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-          </div>
-
-          <!-- Submit Buttons -->
-          <div class="pt-2 grid grid-cols-2 gap-3">
-            <button type="submit" onclick="window.saveMode='normal'" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 px-3 rounded-xl shadow-md transition text-sm flex items-center justify-center gap-1">
-              <span>💾</span> 儲存訂單
-            </button>
-            <button type="submit" onclick="window.saveMode='continue'" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold py-3 px-2 rounded-xl transition text-xs flex items-center justify-center gap-1">
-              <span>➕</span> 儲存並加下一款規格
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <!-- TAB 2: 訂單查詢 (ORDER SEARCH & EDIT) -->
-      <section id="tab-search" class="tab-content space-y-4 hidden">
-        <!-- Search & Filter Controls Card -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
-          <!-- Keyword Input -->
-          <div class="relative">
-            <input type="text" id="search-keyword" oninput="renderOrdersList()" placeholder="搜尋商品名稱、規格、備註..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
-            <span class="absolute left-3 top-2.5 text-slate-400 text-sm">🔍</span>
-            <button type="button" onclick="document.getElementById('search-keyword').value=''; renderOrdersList();" class="absolute right-2.5 top-2.5 text-slate-400 text-xs hover:text-slate-600">✕</button>
-          </div>
-
-          <!-- Time Range Quick Pills -->
-          <div class="space-y-1">
-            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">時間範圍</label>
-            <div class="flex flex-wrap gap-1.5" id="search-time-pills">
-              <button type="button" onclick="setTimeFilter(1)" class="time-pill bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full border border-slate-200 font-medium">1個月</button>
-              <button type="button" onclick="setTimeFilter(3)" class="time-pill bg-brand-500 text-white text-xs px-2.5 py-1 rounded-full border border-brand-500 font-medium">3個月</button>
-              <button type="button" onclick="setTimeFilter(6)" class="time-pill bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full border border-slate-200 font-medium">6個月</button>
-              <button type="button" onclick="setTimeFilter(12)" class="time-pill bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full border border-slate-200 font-medium">1年</button>
-              <button type="button" onclick="setTimeFilter(999)" class="time-pill bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full border border-slate-200 font-medium">全部</button>
-            </div>
-          </div>
-
-          <!-- Filter Dropdowns -->
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-[10px] text-slate-400 font-medium mb-0.5">購買渠道</label>
-              <select id="filter-channel" onchange="renderOrdersList()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none">
-                <option value="ALL">所有渠道</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[10px] text-slate-400 font-medium mb-0.5">大分類</label>
-              <select id="filter-main-cat" onchange="renderOrdersList()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none">
-                <option value="ALL">所有分類</option>
-                <option value="女兒">女兒</option>
-                <option value="兒子">兒子</option>
-                <option value="自用">自用</option>
-                <option value="家用">家用</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Orders Count & Summary -->
-        <div class="flex items-center justify-between text-xs px-1 text-slate-500 font-medium">
-          <span>共 <strong id="orders-count" class="text-slate-800">0</strong> 筆喊單</span>
-          <span>篩選總額：<strong id="orders-total-sum" class="text-brand-600">NT$ 0</strong></span>
-        </div>
-
-        <!-- Orders Cards Container -->
-        <div id="orders-list-container" class="space-y-3">
-          <!-- Dynamically filled order cards -->
-        </div>
-      </section>
-
-      <!-- TAB 3: 月結對帳 (MONTHLY SETTLEMENT) -->
-      <section id="tab-settlement" class="tab-content space-y-4 hidden">
-        <!-- Settlement Sub-tabs -->
-        <div class="bg-slate-200/70 p-1 rounded-xl flex text-xs font-semibold">
-          <button type="button" id="btn-subtab-unpaid" onclick="switchSettlementSubtab('unpaid')" class="flex-1 py-1.5 rounded-lg text-center transition bg-white text-slate-800 shadow-sm">
-            ⏳ 待對帳 (未結)
-          </button>
-          <button type="button" id="btn-subtab-history" onclick="switchSettlementSubtab('history')" class="flex-1 py-1.5 rounded-lg text-center transition text-slate-600 hover:text-slate-800">
-            ✅ 已結帳紀錄
-          </button>
-        </div>
-
-        <!-- Subtab 1: Unpaid Groupings -->
-        <div id="settlement-unpaid-section" class="space-y-4">
-          <div id="unpaid-groups-container" class="space-y-4">
-            <!-- Unpaid groups cards filled dynamically -->
-          </div>
-        </div>
-
-        <!-- Subtab 2: History Records -->
-        <div id="settlement-history-section" class="space-y-4 hidden">
-          <div id="history-records-container" class="space-y-3">
-            <!-- History settlement records filled dynamically -->
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 4: 設定 (SETTINGS & BACKUP) -->
-      <section id="tab-settings" class="tab-content space-y-4 hidden">
-        
-        <!-- Gemini API Key Card -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
-          <div class="flex items-center gap-2 text-sm font-bold text-slate-800">
-            <span>🔑</span>
-            <span>Gemini API Key 設定</span>
-          </div>
-          <p class="text-xs text-slate-500 leading-relaxed">
-            設定 key 後，即可在「記一筆」頁面使用免費 AI 截圖辨識自動填寫功能。Key 將安全儲存在本地瀏覽器。
-          </p>
-          <div class="space-y-2">
-            <input type="password" id="input-api-key" placeholder="貼上 AI Studio API Key (AIzaSy...)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
-            <button type="button" onclick="saveApiKey()" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2 px-3 rounded-xl transition">
-              儲存 API Key
-            </button>
-          </div>
-        </div>
-
-        <!-- Custom Channels Manager -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 text-sm font-bold text-slate-800">
-              <span>🏷️</span>
-              <span>自訂購買渠道管理</span>
-            </div>
-            <button type="button" onclick="restoreDefaultChannels()" class="text-[11px] text-brand-600 hover:underline font-medium">
-              恢復預設渠道
-            </button>
-          </div>
-          
-          <div id="settings-channel-tags" class="flex flex-wrap gap-1.5 pt-1">
-            <!-- Channel tags with delete icon -->
-          </div>
-
-          <div class="flex gap-2 pt-2">
-            <input type="text" id="input-new-channel" placeholder="新增購買渠道名稱..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
-            <button type="button" onclick="addNewChannel()" class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition">
-              新增
-            </button>
-          </div>
-        </div>
-
-        <!-- IndexedDB Data Backup & Restore -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
-          <div class="flex items-center gap-2 text-sm font-bold text-slate-800">
-            <span>💾</span>
-            <span>資料備份與還原</span>
-          </div>
-          <p class="text-xs text-slate-500">
-            匯出或匯入完整 JSON 檔案（包含喊單與結帳紀錄）。具備舊版欄位自動相容轉換。
-          </p>
-
-          <div class="grid grid-cols-2 gap-3 pt-1">
-            <button type="button" onclick="exportDataJson()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-1 shadow-sm">
-              <span>📥</span> 匯出備份檔 (.json)
-            </button>
-            
-            <!-- iOS Safari safe file import button label -->
-            <label for="import-file-input" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-1 shadow-sm cursor-pointer text-center">
-              <span>📤</span> 匯入備份檔
-            </label>
-            <input type="file" id="import-file-input" class="hidden" onchange="importDataJson(event)">
-          </div>
-
-          <!-- Collapsible Paste Fallback for iOS -->
-          <details class="text-xs text-slate-600 pt-1">
-            <summary class="cursor-pointer font-medium text-indigo-600 hover:underline">
-              iPhone 貼上文字備份檔還原 (文字備用方案)
-            </summary>
-            <div class="mt-2 space-y-2">
-              <textarea id="import-text-fallback" rows="4" placeholder="在此處貼上完整的 JSON 備份文字..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[11px] font-mono focus:outline-none"></textarea>
-              <button type="button" onclick="importFromTextFallback()" class="w-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-2 rounded-xl transition">
-                解析並匯入貼上內容
-              </button>
-            </div>
-          </details>
-        </div>
-
-        <!-- Clear All Data -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-2">
-          <div class="flex items-center gap-2 text-sm font-bold text-rose-600">
-            <span>⚠️</span>
-            <span>危險區域</span>
-          </div>
-          <button type="button" onclick="clearAllDataWithConfirm()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-semibold py-2.5 rounded-xl transition">
-            清除所有歷史喊單與對帳資料
-          </button>
-        </div>
-
-      </section>
-
-    </main>
-
-    <!-- Bottom Navigation Bar (Balanced Medium Size) -->
-    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 max-w-md w-full bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 pb-safe-bottom">
-      <div class="grid grid-cols-4 pt-2 pb-2">
-        
-        <button type="button" onclick="switchTab('add')" id="nav-add" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-brand-600">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          <span class="text-[12px] font-semibold">記一筆</span>
-        </button>
-
-        <button type="button" onclick="switchTab('search')" id="nav-search" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <span class="text-[12px] font-semibold">訂單查詢</span>
-        </button>
-
-        <button type="button" onclick="switchTab('settlement')" id="nav-settlement" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-          </svg>
-          <span class="text-[12px] font-semibold">月結對帳</span>
-        </button>
-
-        <button type="button" onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-          </svg>
-          <span class="text-[12px] font-semibold">設定</span>
-        </button>
-
-      </div>
-    </nav>
-  </div>
-
-  <!-- MODAL: EDIT ORDER -->
-  <div id="modal-edit" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-    <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl transform translate-y-full sm:translate-y-0 transition-transform duration-300">
-      <div class="flex items-center justify-between border-b pb-3 border-slate-100">
-        <h3 class="text-base font-bold text-slate-800">編輯訂單細節</h3>
-        <button type="button" onclick="closeEditModal()" class="text-slate-400 text-lg hover:text-slate-600">✕</button>
-      </div>
-
-      <form id="form-edit-order" onsubmit="handleEditFormSubmit(event)" class="space-y-3">
-        <input type="hidden" id="edit-id">
-
+        <!-- 購買渠道 Quick Pills -->
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">品項名稱</label>
-          <input type="text" id="edit-name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="text-xs font-semibold text-slate-600">購買渠道 <span class="text-rose-500">*</span></label>
+            <span class="text-[11px] text-slate-400">網購平台將直接記為已付款</span>
+          </div>
+          <div id="add-channel-pills" class="flex flex-wrap gap-1.5">
+            <!-- Channel pills rendered dynamically -->
+          </div>
         </div>
 
+        <!-- Product Name & Prefix Stripper -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label for="add-name" class="text-xs font-semibold text-slate-600">品項名稱 <span class="text-rose-500">*</span></label>
+            <button type="button" onclick="cleanAddNamePrefix()" class="text-[11px] text-rose-600 hover:text-rose-700 font-medium underline">
+              一鍵清除賣家編號
+            </button>
+          </div>
+          <input type="text" id="add-name" placeholder="例如：1589J*涼感長褲" oninput="onAddFormChange()" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+
+        <!-- Duplicate Warning Alert Box -->
+        <div id="add-dup-warning" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+          <div class="flex items-center gap-1.5 text-amber-800 text-xs font-bold">
+            <span class="text-sm">⚠️</span>
+            <span>疑似重複購買提醒 (近 3 個月)</span>
+          </div>
+          <div id="add-dup-list" class="space-y-1 text-xs text-amber-700"></div>
+        </div>
+
+        <!-- Spec, Price, Quantity -->
         <div class="grid grid-cols-3 gap-2">
-          <div class="col-span-2">
-            <label class="block text-xs font-semibold text-slate-700 mb-1">規格</label>
-            <input type="text" id="edit-spec" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
+          <div class="col-span-1">
+            <label for="add-spec" class="block text-xs font-semibold text-slate-600 mb-1">規格/顏色/尺寸</label>
+            <input type="text" id="add-spec" placeholder="130/黑" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">數量</label>
-            <input type="number" id="edit-qty" min="1" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-center focus:outline-none">
+          <div class="col-span-1">
+            <label for="add-price" class="block text-xs font-semibold text-slate-600 mb-1">單價 ($) <span class="text-rose-500">*</span></label>
+            <input type="number" id="add-price" min="0" placeholder="290" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
           </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">單價 (NT$)</label>
-            <input type="number" id="edit-price" min="0" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">購買渠道</label>
-            <select id="edit-channel" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-sm focus:outline-none">
-              <!-- Options filled dynamically -->
-            </select>
+          <div class="col-span-1">
+            <label for="add-qty" class="block text-xs font-semibold text-slate-600 mb-1">數量 <span class="text-rose-500">*</span></label>
+            <input type="number" id="add-qty" min="1" value="1" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
           </div>
         </div>
 
+        <!-- 2-Level Linked Categories -->
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">大分類</label>
-            <select id="edit-main-cat" onchange="updateSubCategoryDropdown('edit')" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-sm focus:outline-none">
+            <label for="add-main-cat" class="block text-xs font-semibold text-slate-600 mb-1">大分類 <span class="text-rose-500">*</span></label>
+            <select id="add-main-cat" onchange="onMainCatChange('add')" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
               <option value="女兒">女兒</option>
               <option value="兒子">兒子</option>
               <option value="自用">自用</option>
@@ -505,122 +181,481 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">子分類</label>
-            <select id="edit-sub-cat" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-sm focus:outline-none">
+            <label for="add-sub-cat" class="block text-xs font-semibold text-slate-600 mb-1">子分類 <span class="text-rose-500">*</span></label>
+            <select id="add-sub-cat" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
+              <!-- Dynamically filled -->
             </select>
           </div>
         </div>
 
-        <!-- Fix iOS Safari Overflow on Date in Modal -->
-        <div class="w-full min-w-0 overflow-hidden">
-          <label class="block text-xs font-semibold text-slate-700 mb-1">喊單日期</label>
-          <div class="w-full min-w-0">
-            <input type="date" id="edit-date" required class="w-full min-w-0 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
-          </div>
-        </div>
-
+        <!-- Order Date (Full-width & iOS Safe) -->
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">備註</label>
-          <input type="text" id="edit-notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
+          <label for="add-date" class="block text-xs font-semibold text-slate-600 mb-1">喊單日期 <span class="text-rose-500">*</span></label>
+          <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
+            <input type="date" id="add-date" class="w-full px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rose-400">
+          </div>
         </div>
 
-        <!-- Out of Stock & Paid Status Toggles -->
-        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-700">標記為「斷貨」 (金額算 $0)</span>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" id="edit-out-of-stock" class="sr-only peer">
-              <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
-            </label>
+        <!-- Note -->
+        <div>
+          <label for="add-note" class="block text-xs font-semibold text-slate-600 mb-1">備註 (選填)</label>
+          <input type="text" id="add-note" placeholder="例如：等9月預購到貨" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="pt-2 grid grid-cols-2 gap-2">
+          <button type="button" onclick="saveOrder(false)" class="w-full py-3 bg-rose-500 hover:bg-rose-600 active:bg-rose-700 text-white font-bold rounded-xl shadow-md transition text-sm">
+            💾 儲存訂單
+          </button>
+          <button type="button" onclick="saveOrder(true)" class="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl border border-rose-200 transition text-sm">
+            ➕ 儲存並加下一款規格
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: 訂單查詢 (ORDER SEARCH) -->
+    <section id="tab-search" class="tab-content space-y-3 hidden">
+      
+      <!-- Search & Filters Container -->
+      <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-rose-100 space-y-3">
+        <!-- Search Bar -->
+        <div class="relative">
+          <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
+          <input type="text" id="search-keyword" placeholder="搜尋品項、規格、渠道或備註..." oninput="renderOrdersList()" class="w-full pl-9 pr-8 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400">
+          <button onclick="document.getElementById('search-keyword').value=''; renderOrdersList();" class="absolute inset-y-0 right-2.5 flex items-center text-slate-400 hover:text-slate-600 text-xs font-bold">✕</button>
+        </div>
+
+        <!-- Date Range Pills -->
+        <div class="space-y-1">
+          <label class="text-[11px] font-semibold text-slate-500">時間範圍</label>
+          <div class="flex flex-wrap gap-1" id="date-range-pills">
+            <button onclick="setDateFilter('1m')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="1m">1個月</button>
+            <button onclick="setDateFilter('3m')" class="date-pill px-2.5 py-1 text-xs rounded-lg border bg-rose-50 text-rose-600 border-rose-300 font-semibold" data-range="3m">3個月</button>
+            <button onclick="setDateFilter('6m')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="6m">6個月</button>
+            <button onclick="setDateFilter('1y')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="1y">1年</button>
+            <button onclick="setDateFilter('all')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="all">全部</button>
+            <button onclick="setDateFilter('custom')" class="date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200" data-range="custom">自訂</button>
           </div>
-          <div class="flex items-center justify-between border-t border-slate-200/60 pt-2">
-            <span class="text-xs font-bold text-slate-700">付款狀態</span>
-            <select id="edit-is-paid" class="bg-white border border-slate-200 rounded-lg text-xs px-2 py-1 font-medium">
-              <option value="false">⏳ 未付款 (進入月結對帳)</option>
-              <option value="true">✅ 已付款</option>
+          <!-- Custom Date Input Row -->
+          <div id="custom-date-box" class="hidden grid grid-cols-2 gap-2 pt-1.5">
+            <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
+              <input type="date" id="filter-start-date" onchange="renderOrdersList()" class="w-full px-2 py-1 text-xs">
+            </div>
+            <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
+              <input type="date" id="filter-end-date" onchange="renderOrdersList()" class="w-full px-2 py-1 text-xs">
+            </div>
+          </div>
+        </div>
+
+        <!-- Category & Channel Filter Pills -->
+        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">大分類篩選</label>
+            <select id="filter-main-cat" onchange="renderOrdersList()" class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white">
+              <option value="ALL">全部大分類</option>
+              <option value="女兒">女兒</option>
+              <option value="兒子">兒子</option>
+              <option value="自用">自用</option>
+              <option value="家用">家用</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">購買渠道篩選</label>
+            <select id="filter-channel" onchange="renderOrdersList()" class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white">
+              <option value="ALL">全部渠道</option>
+              <!-- Filled dynamically -->
             </select>
           </div>
         </div>
-
-        <div class="pt-2 flex gap-2">
-          <button type="button" onclick="deleteCurrentEditOrder()" class="bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-semibold px-3 py-2.5 rounded-xl text-xs transition">
-            🗑️ 刪除
-          </button>
-          <button type="submit" class="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-semibold py-2.5 rounded-xl text-xs shadow transition">
-            儲存變更
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: BATCH SETTLEMENT -->
-  <div id="modal-settlement" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-    <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
-      <div class="flex items-center justify-between border-b pb-3 border-slate-100">
-        <div>
-          <h3 class="text-base font-bold text-slate-800">整批月結對帳付清</h3>
-          <p id="settle-modal-subtitle" class="text-xs text-slate-400 font-medium"></p>
-        </div>
-        <button type="button" onclick="closeSettlementModal()" class="text-slate-400 text-lg hover:text-slate-600">✕</button>
       </div>
 
-      <div class="space-y-3">
-        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-xs">
-          <div class="flex justify-between text-slate-600">
-            <span>喊單商品數:</span>
-            <span id="settle-items-count" class="font-bold">0 件</span>
-          </div>
-          <div class="flex justify-between text-slate-600">
-            <span>小計金額 (扣除斷貨):</span>
-            <span id="settle-subtotal" class="font-bold text-slate-800">NT$ 0</span>
-          </div>
-        </div>
+      <!-- Orders Count & Subtotal Bar -->
+      <div class="flex justify-between items-center text-xs text-slate-500 px-1 font-medium">
+        <span id="search-result-count">共 0 筆訂單</span>
+        <span id="search-result-subtotal">總額：$0</span>
+      </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">運費 (+)</label>
-            <input type="number" id="settle-shipping" min="0" value="0" oninput="calculateSettlementTotal()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">折扣/購物金 (-)</label>
-            <input type="number" id="settle-discount" min="0" value="0" oninput="calculateSettlementTotal()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
-          </div>
-        </div>
+      <!-- Orders List Container -->
+      <div id="orders-list" class="space-y-2.5">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
 
-        <!-- Fix iOS Safari Overflow on Date in Settlement Modal -->
-        <div class="w-full min-w-0 overflow-hidden">
-          <label class="block text-xs font-semibold text-slate-700 mb-1">對帳付款日期</label>
-          <div class="w-full min-w-0">
-            <input type="date" id="settle-paid-date" required class="w-full min-w-0 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">對帳備註 (例: 匯款末5碼)</label>
-          <input type="text" id="settle-notes" placeholder="例如：已中信轉帳 末碼 888" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
-        </div>
-
-        <div class="bg-brand-50 p-3 rounded-xl border border-brand-200 flex items-center justify-between">
-          <span class="text-xs font-bold text-brand-900">實付總額 (Net Total):</span>
-          <span id="settle-final-total" class="text-lg font-bold text-brand-600">NT$ 0</span>
-        </div>
-
-        <button type="button" onclick="confirmBatchSettlement()" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 rounded-xl text-sm shadow-md transition flex items-center justify-center gap-1">
-          <span>✅</span> 確認對帳完成並標記付清
+    <!-- TAB 3: 月結對帳 (MONTHLY SETTLEMENT) -->
+    <section id="tab-settle" class="tab-content space-y-4 hidden">
+      
+      <!-- Sub-Tab Navigation -->
+      <div class="flex border-b border-rose-200">
+        <button onclick="switchSettleSubTab('unpaid')" id="btn-subtab-unpaid" class="flex-1 py-2 text-center text-xs font-bold text-rose-600 border-b-2 border-rose-500">
+          未結帳清單
+        </button>
+        <button onclick="switchSettleSubTab('history')" id="btn-subtab-history" class="flex-1 py-2 text-center text-xs font-bold text-slate-400 border-b-2 border-transparent">
+          已結帳 / 付款紀錄
         </button>
       </div>
+
+      <!-- UNPAID BATCHES VIEW -->
+      <div id="settle-unpaid-view" class="space-y-3">
+        <div class="bg-rose-50 border border-rose-100 rounded-xl p-3 text-xs text-rose-800 flex justify-between items-center">
+          <div>
+            <p class="font-bold">💡 對帳提示</p>
+            <p class="text-[11px] text-rose-600">按「購買渠道 + 月份」自動分組。斷貨品項不計入對帳總額。</p>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-rose-400">未結總計</span>
+            <div id="unpaid-grand-total" class="text-sm font-extrabold text-rose-600">$0</div>
+          </div>
+        </div>
+
+        <div id="unpaid-batches-list" class="space-y-3">
+          <!-- Batches rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- HISTORY VIEW -->
+      <div id="settle-history-view" class="space-y-3 hidden">
+        <div id="history-settlements-list" class="space-y-3">
+          <!-- History rendered dynamically -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 4: 設定 (SETTINGS) -->
+    <section id="tab-settings" class="tab-content space-y-4 hidden">
+      
+      <!-- Gemini API Key Config -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 space-y-3">
+        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+          <span>✨</span> Gemini AI 截圖辨識設定
+        </h3>
+        <p class="text-xs text-slate-500">輸入 Gemini API Key 後，上傳喊單截圖可一鍵自動填寫品項名稱、單價、數量與規格。</p>
+        <div>
+          <input type="password" id="setting-gemini-key" placeholder="AIZA-Sy..." class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+        <button onclick="saveGeminiKey()" class="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-lg text-xs transition">
+          儲存 API Key
+        </button>
+      </div>
+
+      <!-- Custom Channels Config -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 space-y-3">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <span>🏷️</span> 自訂購買渠道管理
+          </h3>
+          <button onclick="restoreDefaultChannels()" class="text-xs text-rose-600 hover:underline">
+            恢復預設渠道
+          </button>
+        </div>
+        <p class="text-xs text-slate-500">預設包含 Moby, Mina, 319, 痛經, Renee。您可自由新增或刪除。</p>
+        
+        <div class="flex gap-2">
+          <input type="text" id="setting-new-channel" placeholder="新增渠道名稱" class="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg">
+          <button onclick="addCustomChannel()" class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-lg text-xs">
+            新增
+          </button>
+        </div>
+
+        <div id="setting-channels-list" class="flex flex-wrap gap-1.5 pt-2">
+          <!-- Channels list rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Backup & Restore -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 space-y-3">
+        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+          <span>💾</span> 資料備份與還原
+        </h3>
+        <p class="text-xs text-slate-500">匯出完整 JSON 檔案以防資料遺失；支援在 iOS 或跨裝置還原。</p>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="exportBackupJSON()" class="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl border border-rose-200 text-xs transition flex items-center justify-center gap-1">
+            <span>📥</span> 匯出 JSON 備份
+          </button>
+          
+          <!-- iOS Safe Native Import Label -->
+          <label for="import-file-input" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl border border-slate-200 text-xs transition flex items-center justify-center gap-1 cursor-pointer">
+            <span>📤</span> 匯入 JSON 檔案
+          </label>
+          <input type="file" id="import-file-input" class="hidden" onchange="importBackupJSON(event)">
+        </div>
+
+        <!-- Textarea Backup Fallback -->
+        <details class="pt-2 text-xs">
+          <summary class="font-semibold text-slate-600 cursor-pointer hover:text-rose-600">文字剪貼簿備份/還原 (備用)</summary>
+          <div class="mt-2 space-y-2">
+            <textarea id="setting-backup-text" rows="4" placeholder="在此處貼上 JSON 備份文字..." class="w-full p-2 text-[11px] font-mono border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-400"></textarea>
+            <div class="flex gap-2">
+              <button onclick="copyBackupToClipboard()" class="flex-1 py-1.5 bg-slate-100 text-slate-700 font-semibold rounded-lg text-xs">複製現有備份文字</button>
+              <button onclick="importBackupFromText()" class="flex-1 py-1.5 bg-rose-500 text-white font-semibold rounded-lg text-xs">從文字還原</button>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="bg-red-50 border border-red-100 rounded-2xl p-4 space-y-2">
+        <h3 class="text-sm font-bold text-red-700">⚠️ 危險區域</h3>
+        <p class="text-xs text-red-600">清除本機所有訂單與對帳紀錄，此動作無法復原。</p>
+        <button onclick="clearAllData()" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition">
+          清除所有資料
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- EDIT ORDER MODAL (編輯訂單彈窗) -->
+  <div id="modal-edit" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-4 space-y-4 shadow-2xl relative border border-rose-100">
+      
+      <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-1.5">
+          <span>✏️</span> 編輯訂單
+        </h3>
+        <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg p-1">✕</button>
+      </div>
+
+      <input type="hidden" id="edit-id">
+
+      <!-- Edit Image -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">商品圖片</label>
+        <div class="flex items-center space-x-3">
+          <div id="edit-img-preview-box" class="w-20 h-20 bg-slate-100 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 overflow-hidden relative group">
+            <span class="text-2xl">📷</span>
+            <img id="edit-img-preview" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl" alt="Preview">
+          </div>
+          <input type="file" id="edit-img-input" accept="image/*" class="hidden" onchange="handleImageUpload(event, 'edit')">
+          
+          <div class="flex-1 space-y-1.5">
+            <button type="button" onclick="document.getElementById('edit-img-input').click()" class="w-full text-xs py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg border border-slate-200 transition">
+              更換圖片
+            </button>
+            <button type="button" id="btn-remove-edit-img" onclick="clearImage('edit')" class="hidden w-full text-xs py-1.5 text-rose-500 font-medium hover:underline">
+              移除圖片
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 購買渠道 Quick Pills -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1.5">購買渠道 <span class="text-rose-500">*</span></label>
+        <div id="edit-channel-pills" class="flex flex-wrap gap-1.5">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Product Name & Prefix Stripper -->
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <label for="edit-name" class="text-xs font-semibold text-slate-600">品項名稱 <span class="text-rose-500">*</span></label>
+          <button type="button" onclick="cleanEditNamePrefix()" class="text-[11px] text-rose-600 hover:text-rose-700 font-medium underline">
+            一鍵清除賣家編號
+          </button>
+        </div>
+        <input type="text" id="edit-name" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+      </div>
+
+      <!-- Spec, Price, Quantity -->
+      <div class="grid grid-cols-3 gap-2">
+        <div class="col-span-1">
+          <label for="edit-spec" class="block text-xs font-semibold text-slate-600 mb-1">規格</label>
+          <input type="text" id="edit-spec" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+        <div class="col-span-1">
+          <label for="edit-price" class="block text-xs font-semibold text-slate-600 mb-1">單價 ($)</label>
+          <input type="number" id="edit-price" min="0" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+        <div class="col-span-1">
+          <label for="edit-qty" class="block text-xs font-semibold text-slate-600 mb-1">數量</label>
+          <input type="number" id="edit-qty" min="1" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+      </div>
+
+      <!-- 2-Level Linked Categories -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label for="edit-main-cat" class="block text-xs font-semibold text-slate-600 mb-1">大分類</label>
+          <select id="edit-main-cat" onchange="onMainCatChange('edit')" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
+            <option value="女兒">女兒</option>
+            <option value="兒子">兒子</option>
+            <option value="自用">自用</option>
+            <option value="家用">家用</option>
+          </select>
+        </div>
+        <div>
+          <label for="edit-sub-cat" class="block text-xs font-semibold text-slate-600 mb-1">子分類</label>
+          <select id="edit-sub-cat" class="w-full px-2.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
+            <!-- Filled dynamically -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Order Date -->
+      <div>
+        <label for="edit-date" class="block text-xs font-semibold text-slate-600 mb-1">喊單日期</label>
+        <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
+          <input type="date" id="edit-date" class="w-full px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+      </div>
+
+      <!-- Status Switches -->
+      <div class="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <label class="flex items-center space-x-2 cursor-pointer">
+          <input type="checkbox" id="edit-is-outofstock" class="w-4 h-4 text-rose-600 rounded focus:ring-rose-400">
+          <span class="text-xs font-bold text-slate-700">標記為「斷貨」</span>
+        </label>
+        <label class="flex items-center space-x-2 cursor-pointer">
+          <input type="checkbox" id="edit-is-paid" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-400">
+          <span class="text-xs font-bold text-slate-700">標記為「已付款」</span>
+        </label>
+      </div>
+
+      <!-- Note -->
+      <div>
+        <label for="edit-note" class="block text-xs font-semibold text-slate-600 mb-1">備註</label>
+        <input type="text" id="edit-note" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="pt-2 flex flex-col space-y-2">
+        <button onclick="saveEditModal()" class="w-full py-3 bg-rose-500 hover:bg-rose-600 active:bg-rose-700 text-white font-bold rounded-xl shadow-md text-sm transition">
+          💾 儲存修改
+        </button>
+        <div class="flex gap-2">
+          <button onclick="deleteOrderFromModal()" class="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl border border-red-200 text-xs transition">
+            🗑️ 刪除此筆
+          </button>
+          <button onclick="closeEditModal()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">
+            取消
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 
+  <!-- BATCH SETTLEMENT MODAL (整批對帳彈窗) -->
+  <div id="modal-batch-settle" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl w-full max-w-md p-4 space-y-4 shadow-2xl relative border border-rose-100">
+      
+      <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-1.5">
+          <span>💳</span> 整批結帳對帳
+        </h3>
+        <button onclick="closeBatchSettleModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg p-1">✕</button>
+      </div>
 
-  <!-- APPLICATION JAVASCRIPT LOGIC -->
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs">
+        <div class="flex justify-between text-slate-600">
+          <span>結帳渠道：</span>
+          <span id="settle-modal-channel" class="font-bold text-slate-800"></span>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>結帳月份：</span>
+          <span id="settle-modal-month" class="font-bold text-slate-800"></span>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>有效商品數 (扣除斷貨)：</span>
+          <span id="settle-modal-item-count" class="font-bold text-slate-800"></span>
+        </div>
+        <div class="flex justify-between text-slate-600 pt-1 border-t border-slate-200">
+          <span>商品小計：</span>
+          <span id="settle-modal-subtotal" class="font-bold text-rose-600"></span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label for="settle-shipping" class="block text-xs font-semibold text-slate-600 mb-1">運費 / 雜費 (+)</label>
+          <input type="number" id="settle-shipping" value="0" min="0" oninput="calculateFinalSettleTotal()" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+        <div>
+          <label for="settle-discount" class="block text-xs font-semibold text-slate-600 mb-1">折抵 / 購物金 (-)</label>
+          <input type="number" id="settle-discount" value="0" min="0" oninput="calculateFinalSettleTotal()" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+      </div>
+
+      <div>
+        <label for="settle-pay-date" class="block text-xs font-semibold text-slate-600 mb-1">付款完成日期</label>
+        <div class="overflow-hidden min-w-0 rounded-lg border border-slate-200">
+          <input type="date" id="settle-pay-date" class="w-full px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rose-400">
+        </div>
+      </div>
+
+      <div>
+        <label for="settle-note" class="block text-xs font-semibold text-slate-600 mb-1">對帳備註 (選填)</label>
+        <input type="text" id="settle-note" placeholder="例如：中信轉帳、含全家運費" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400">
+      </div>
+
+      <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 flex justify-between items-center">
+        <span class="text-xs font-bold text-rose-800">應付清總金額：</span>
+        <span id="settle-modal-final-total" class="text-lg font-extrabold text-rose-600">$0</span>
+      </div>
+
+      <div class="pt-2 flex gap-2">
+        <button onclick="confirmBatchSettle()" class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md text-sm transition">
+          ✅ 確認已付清結帳
+        </button>
+        <button onclick="closeBatchSettleModal()" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">
+          取消
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-rose-100 z-30 pb-[env(safe-area-inset-bottom)]">
+    <div class="max-w-md mx-auto grid grid-cols-4 pt-2.5 pb-2.5">
+      
+      <button onclick="switchTab('add')" id="nav-add" class="nav-btn flex flex-col items-center justify-center text-rose-600">
+        <svg class="w-[25px] h-[25px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span class="text-[12.5px] font-bold mt-1">記一筆</span>
+      </button>
+
+      <button onclick="switchTab('search')" id="nav-search" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600">
+        <svg class="w-[25px] h-[25px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <span class="text-[12.5px] font-bold mt-1">訂單查詢</span>
+      </button>
+
+      <button onclick="switchTab('settle')" id="nav-settle" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600 relative">
+        <svg class="w-[25px] h-[25px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+        </svg>
+        <span class="text-[12.5px] font-bold mt-1">月結對帳</span>
+        <span id="nav-settle-badge" class="hidden absolute top-1.5 right-6 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
+      </button>
+
+      <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600">
+        <svg class="w-[25px] h-[25px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        <span class="text-[12.5px] font-bold mt-1">設定</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- JAVASCRIPT LOGIC -->
   <script>
-    /* ==========================================================================
-       1. CONSTANTS, CATEGORIES & DEFAULT CHANNELS
-       ========================================================================== */
+    // -----------------------------------------------------------------
+    // CONSTANTS & CATEGORY DATA
+    // -----------------------------------------------------------------
     const DEFAULT_CHANNELS = ['Moby', 'Mina', '319', '痛經', 'Renee'];
-    
+    const PLATFORM_CHANNEL = '網購平台';
+
     const CATEGORIES = {
       '女兒': ['衣服', '用品', '玩具', '其他'],
       '兒子': ['衣服', '用品', '玩具', '其他'],
@@ -628,374 +663,379 @@
       '家用': ['家居用品', '清潔用品', '食品', '其他']
     };
 
-    let currentImageData = null; // Base64 thumbnail string
-    let activeSettlementTarget = null; // Target group during settlement process
+    // Keyword rule mappings for smart auto-classification
+    const AUTO_CAT_RULES = [
+      { main: '女兒', sub: '衣服', keywords: ['女童', '裙', '庫洛米', '美樂蒂', '公主', '髮圈', '女嬰', '洋裝', '莉卡'] },
+      { main: '女兒', sub: '衣服', sizeCheck: (spec) => ['130', '140', '150'].some(s => spec.includes(s)) && !spec.includes('男') },
+      { main: '兒子', sub: '衣服', keywords: ['男童', '恐龍', 'tomica', '小汽車', '拼圖', '蝙蝠俠', '超人', '高達', '變形金剛'] },
+      { main: '兒子', sub: '衣服', sizeCheck: (spec) => ['120'].some(s => spec.includes(s)) },
+      { main: '自用', sub: '用品', keywords: ['成人', '精華液', '棉片', '一條根', '面膜', '防曬', '卸妝', '膠原蛋白', '皮包'] },
+      { main: '家用', sub: '清潔用品', keywords: ['洗手乳', '馬桶', '洗衣精', '洗碗精', '除黴', '抹布', '垃圾袋', '濕紙巾'] },
+      { main: '家用', sub: '食品', keywords: ['昆布', '軟糖', '辣椒醬', '奶昔', '爆米花', '餅乾', '咖啡', '海苔', '泡麵', '堅果'] }
+    ];
 
-    /* ==========================================================================
-       2. INDEXEDDB SETUP
-       ========================================================================== */
-    const DB_NAME = 'dib_groupbuy_db';
-    const DB_VERSION = 1;
+    // Global App State
     let db = null;
+    let currentSelectedAddChannel = 'Moby';
+    let currentSelectedEditChannel = 'Moby';
+    let selectedDateRange = '3m';
+    let currentImageAddBase64 = null;
+    let currentImageEditBase64 = null;
+    let currentBatchSettleData = null;
 
+    // -----------------------------------------------------------------
+    // INDEXEDDB DATABASE MANAGER
+    // -----------------------------------------------------------------
     function initDB() {
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        const request = indexedDB.open('DidIBuyThisDB', 2);
+        
         request.onupgradeneeded = (e) => {
           const dbInstance = e.target.result;
           if (!dbInstance.objectStoreNames.contains('orders')) {
-            const orderStore = dbInstance.createObjectStore('orders', { keyPath: 'id' });
-            orderStore.createIndex('date', 'date', { unique: false });
-            orderStore.createIndex('channel', 'channel', { unique: false });
-            orderStore.createIndex('isPaid', 'isPaid', { unique: false });
+            const store = dbInstance.createObjectStore('orders', { keyPath: 'id' });
+            store.createIndex('date', 'date', { unique: false });
+            store.createIndex('channel', 'channel', { unique: false });
+            store.createIndex('isPaid', 'isPaid', { unique: false });
           }
           if (!dbInstance.objectStoreNames.contains('settlements')) {
             dbInstance.createObjectStore('settlements', { keyPath: 'id' });
           }
         };
+
         request.onsuccess = (e) => {
           db = e.target.result;
           resolve(db);
         };
-        request.onerror = (e) => reject(e.target.error);
+
+        request.onerror = (e) => {
+          showToast('資料庫初始化失敗', 'error');
+          reject(e);
+        };
       });
     }
 
-    // DB CRUD Operations
-    function dbGetAll(storeName) {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readonly');
-        const store = tx.objectStore(storeName);
+    function getAllOrdersDB() {
+      return new Promise((resolve) => {
+        if (!db) return resolve([]);
+        const tx = db.transaction('orders', 'readonly');
+        const store = tx.objectStore('orders');
         const req = store.getAll();
         req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => reject(req.error);
+        req.onerror = () => resolve([]);
       });
     }
 
-    function dbPut(storeName, item) {
+    function saveOrderDB(order) {
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        const req = store.put(item);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+        const tx = db.transaction('orders', 'readwrite');
+        const store = tx.objectStore('orders');
+        const req = store.put(order);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e);
       });
     }
 
-    function dbDelete(storeName, id) {
+    function deleteOrderDB(id) {
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
+        const tx = db.transaction('orders', 'readwrite');
+        const store = tx.objectStore('orders');
         const req = store.delete(id);
         req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error);
+        req.onerror = (e) => reject(e);
       });
     }
 
-    /* ==========================================================================
-       3. BACKWARD-COMPATIBLE NORMALIZER (normalizeOrder)
-       ========================================================================== */
-    function normalizeOrder(item) {
-      if (!item) return null;
-      const copy = { ...item };
-
-      // Normalizing mainCategory & subCategory
-      let mainCat = copy.mainCategory || copy.category || copy.cat1 || copy.majorCategory || '';
-      let subCat = copy.subCategory || copy.subcategory || copy.subCat || copy.cat2 || '';
-
-      // Splitting combined strings like "女兒-衣服"
-      if (!subCat && mainCat.includes('-')) {
-        const parts = mainCat.split('-');
-        mainCat = parts[0].trim();
-        subCat = parts[1].trim();
-      }
-
-      if (!CATEGORIES[mainCat]) {
-        mainCat = '女兒';
-      }
-      if (!CATEGORIES[mainCat].includes(subCat)) {
-        subCat = CATEGORIES[mainCat][0];
-      }
-
-      copy.mainCategory = mainCat;
-      copy.subCategory = subCat;
-
-      // Normalizing Channel
-      copy.channel = copy.channel || copy.group || copy.shop || copy.store || 'Moby';
-
-      // Normalizing numerical values & flags
-      copy.qty = Number(copy.qty) || 1;
-      copy.price = Number(copy.price) || 0;
-      copy.isPaid = Boolean(copy.isPaid);
-      copy.isOutOfStock = Boolean(copy.isOutOfStock);
-      copy.notes = copy.notes || '';
-      copy.spec = copy.spec || '';
-      copy.name = copy.name || '未命名商品';
-      copy.date = copy.date || new Date().toISOString().split('T')[0];
-
-      return copy;
+    function getAllSettlementsDB() {
+      return new Promise((resolve) => {
+        if (!db) return resolve([]);
+        const tx = db.transaction('settlements', 'readonly');
+        const store = tx.objectStore('settlements');
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      });
     }
 
-    /* ==========================================================================
-       4. CHANNEL MANAGEMENT LOGIC
-       ========================================================================== */
-    function loadChannels() {
-      const stored = localStorage.getItem('dib_channels');
-      if (!stored) {
-        localStorage.setItem('dib_channels', JSON.stringify(DEFAULT_CHANNELS));
-        return [...DEFAULT_CHANNELS];
+    function saveSettlementDB(settlement) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('settlements', 'readwrite');
+        const store = tx.objectStore('settlements');
+        const req = store.put(settlement);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    function deleteSettlementDB(id) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('settlements', 'readwrite');
+        const store = tx.objectStore('settlements');
+        const req = store.delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    // -----------------------------------------------------------------
+    // CHANNELS STORAGE MANAGEMENT
+    // -----------------------------------------------------------------
+    function getStoredChannels() {
+      const raw = localStorage.getItem('did_i_buy_channels');
+      if (!raw) {
+        localStorage.setItem('did_i_buy_channels', JSON.stringify(DEFAULT_CHANNELS));
+        return DEFAULT_CHANNELS;
       }
       try {
-        const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) && parsed.length > 0 ? parsed : [...DEFAULT_CHANNELS];
+        return JSON.parse(raw);
       } catch (e) {
-        return [...DEFAULT_CHANNELS];
+        return DEFAULT_CHANNELS;
       }
     }
 
-    function saveChannels(channelsArray) {
-      localStorage.setItem('dib_channels', JSON.stringify(channelsArray));
+    function saveStoredChannels(channels) {
+      localStorage.setItem('did_i_buy_channels', JSON.stringify(channels));
       renderChannelPills();
       renderSettingsChannels();
-      populateChannelDropdowns();
+      populateChannelFilterSelect();
     }
 
     function restoreDefaultChannels() {
-      saveChannels([...DEFAULT_CHANNELS]);
-      showToast('已成功恢復預設購買渠道！');
+      saveStoredChannels(DEFAULT_CHANNELS);
+      showToast('已恢復預設購買渠道');
     }
 
-    function addNewChannel() {
-      const input = document.getElementById('input-new-channel');
+    function addCustomChannel() {
+      const input = document.getElementById('setting-new-channel');
       const val = input.value.trim();
       if (!val) return;
-      
-      const channels = loadChannels();
-      if (channels.includes(val) || val === '網購平台') {
-        showToast('此渠道名稱已存在！');
+      if (val === PLATFORM_CHANNEL) {
+        showToast('此渠道名稱為系統預留', 'warning');
+        return;
+      }
+      const channels = getStoredChannels();
+      if (channels.includes(val)) {
+        showToast('該渠道已存在', 'warning');
         return;
       }
       channels.push(val);
-      saveChannels(channels);
+      saveStoredChannels(channels);
       input.value = '';
-      showToast(`已新增購買渠道：「${val}」`);
+      showToast(`已新增渠道：${val}`);
     }
 
-    function removeChannel(name) {
-      let channels = loadChannels();
+    function removeCustomChannel(name) {
+      let channels = getStoredChannels();
       channels = channels.filter(c => c !== name);
-      if (channels.length === 0) {
-        showToast('請至少保留一個購買渠道！');
-        return;
-      }
-      saveChannels(channels);
-      showToast(`已刪除購買渠道：「${name}」`);
+      saveStoredChannels(channels);
+      showToast(`已刪除渠道：${name}`);
     }
 
-    function renderChannelPills() {
-      const container = document.getElementById('channel-pills');
-      const channels = loadChannels();
-      const currentSelected = document.getElementById('add-channel').value || channels[0];
+    // -----------------------------------------------------------------
+    // UI INITIALIZATION & TAB SWITCHING
+    // -----------------------------------------------------------------
+    window.onload = async function() {
+      await initDB();
+      
+      // Default Add Date to today
+      document.getElementById('add-date').valueAsDate = new Date();
+      
+      // Init categories linked dropdowns
+      onMainCatChange('add');
+      onMainCatChange('edit');
 
-      let html = '';
-      channels.forEach(ch => {
-        const isSelected = (currentSelected === ch);
-        html += `
-          <button type="button" onclick="selectChannelPill('${ch}')" 
-            class="px-3 py-1.5 rounded-xl text-xs font-semibold transition shadow-sm border ${isSelected ? 'bg-brand-500 text-white border-brand-500' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}">
-            ${ch}
-          </button>
-        `;
+      // Init channels UI
+      renderChannelPills();
+      renderSettingsChannels();
+      populateChannelFilterSelect();
+
+      // Load saved Gemini Key if available
+      const key = localStorage.getItem('did_i_buy_gemini_key');
+      if (key) {
+        document.getElementById('setting-gemini-key').value = key;
+        document.getElementById('btn-ai-parse').classList.remove('hidden');
+      }
+
+      // Initial data render
+      updateHeaderStats();
+      renderOrdersList();
+      renderSettlementView();
+    };
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(el => {
+        el.classList.remove('text-rose-600');
+        el.classList.add('text-slate-400');
       });
 
-      // Distinct E-commerce quick select pill
-      const isEcom = (currentSelected === '網購平台');
-      html += `
-        <button type="button" onclick="selectChannelPill('網購平台')" 
-          class="px-3 py-1.5 rounded-xl text-xs font-semibold transition shadow-sm border ${isEcom ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'}">
-          🛒 網購平台
-        </button>
-      `;
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      document.getElementById(`nav-${tabName}`).classList.remove('text-slate-400');
+      document.getElementById(`nav-${tabName}`).classList.add('text-rose-600');
 
-      container.innerHTML = html;
-      
-      if (!currentSelected || (!channels.includes(currentSelected) && currentSelected !== '網購平台')) {
-        selectChannelPill(channels[0]);
+      if (tabName === 'search') renderOrdersList();
+      if (tabName === 'settle') renderSettlementView();
+      if (tabName === 'settings') renderSettingsChannels();
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function switchSettleSubTab(sub) {
+      const btnUnpaid = document.getElementById('btn-subtab-unpaid');
+      const btnHistory = document.getElementById('btn-subtab-history');
+      const viewUnpaid = document.getElementById('settle-unpaid-view');
+      const viewHistory = document.getElementById('settle-history-view');
+
+      if (sub === 'unpaid') {
+        btnUnpaid.className = 'flex-1 py-2 text-center text-xs font-bold text-rose-600 border-b-2 border-rose-500';
+        btnHistory.className = 'flex-1 py-2 text-center text-xs font-bold text-slate-400 border-b-2 border-transparent';
+        viewUnpaid.classList.remove('hidden');
+        viewHistory.classList.add('hidden');
+      } else {
+        btnHistory.className = 'flex-1 py-2 text-center text-xs font-bold text-rose-600 border-b-2 border-rose-500';
+        btnUnpaid.className = 'flex-1 py-2 text-center text-xs font-bold text-slate-400 border-b-2 border-transparent';
+        viewHistory.classList.remove('hidden');
+        viewUnpaid.classList.add('hidden');
       }
     }
 
-    function selectChannelPill(chName) {
-      document.getElementById('add-channel').value = chName;
+    // Toast Message Helper
+    function showToast(msg, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      const bgColor = type === 'error' ? 'bg-red-600' : (type === 'warning' ? 'bg-amber-500' : 'bg-slate-800');
+      toast.className = `${bgColor} text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg transition-all transform translate-y-[-10px] opacity-0 flex items-center justify-between`;
+      toast.innerHTML = `<span>${msg}</span><button onclick="this.parentElement.remove()" class="ml-3 text-slate-400 hover:text-white">✕</button>`;
+
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // -----------------------------------------------------------------
+    // CATEGORY DROPDOWNS & AUTO-CLASSIFICATION
+    // -----------------------------------------------------------------
+    function onMainCatChange(prefix) {
+      const mainSelect = document.getElementById(`${prefix}-main-cat`);
+      const subSelect = document.getElementById(`${prefix}-sub-cat`);
+      const mainVal = mainSelect.value;
+      
+      const subs = CATEGORIES[mainVal] || CATEGORIES['女兒'];
+      subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+
+    // Seller prefix stripper (clean patterns like "1589J*", "0200G*", "|H1043", "|T1023", "貳六_11團(25)_")
+    function cleanSellerPrefix(name) {
+      if (!name) return '';
+      let cleaned = name;
+      // Strip common seller codes at the start
+      cleaned = cleaned.replace(/^(?:[A-Za-z0-9_\u4e00-\u9fa5]+[*(|_]|[\u4e00-\u9fa50-9_]+團\(\d+\)_?\s*)+/gi, '');
+      return cleaned.trim();
+    }
+
+    function cleanAddNamePrefix() {
+      const el = document.getElementById('add-name');
+      el.value = cleanSellerPrefix(el.value);
+      onAddFormChange();
+    }
+
+    function cleanEditNamePrefix() {
+      const el = document.getElementById('edit-name');
+      el.value = cleanSellerPrefix(el.value);
+    }
+
+    function autoClassifyCategory(name, spec) {
+      const text = (name + ' ' + spec).toLowerCase();
+      
+      for (const rule of AUTO_CAT_RULES) {
+        if (rule.keywords && rule.keywords.some(k => text.includes(k.toLowerCase()))) {
+          return { main: rule.main, sub: rule.sub };
+        }
+        if (rule.sizeCheck && rule.sizeCheck(spec)) {
+          return { main: rule.main, sub: rule.sub };
+        }
+      }
+      return null;
+    }
+
+    // -----------------------------------------------------------------
+    // CHANNEL PILLS RENDER
+    // -----------------------------------------------------------------
+    function renderChannelPills() {
+      const channels = getStoredChannels();
+      const allChannels = [...channels, PLATFORM_CHANNEL];
+
+      // Add Pills
+      const addContainer = document.getElementById('add-channel-pills');
+      addContainer.innerHTML = allChannels.map(ch => {
+        const isSelected = ch === currentSelectedAddChannel;
+        const activeStyle = isSelected ? 'bg-rose-500 text-white font-bold shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
+        return `<button type="button" onclick="selectChannel('add', '${ch}')" class="px-3 py-1.5 text-xs rounded-xl transition ${activeStyle}">${ch}</button>`;
+      }).join('');
+
+      // Edit Pills
+      const editContainer = document.getElementById('edit-channel-pills');
+      editContainer.innerHTML = allChannels.map(ch => {
+        const isSelected = ch === currentSelectedEditChannel;
+        const activeStyle = isSelected ? 'bg-rose-500 text-white font-bold shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
+        return `<button type="button" onclick="selectChannel('edit', '${ch}')" class="px-3 py-1.5 text-xs rounded-xl transition ${activeStyle}">${ch}</button>`;
+      }).join('');
+    }
+
+    function selectChannel(prefix, channelName) {
+      if (prefix === 'add') {
+        currentSelectedAddChannel = channelName;
+      } else {
+        currentSelectedEditChannel = channelName;
+      }
       renderChannelPills();
     }
 
     function renderSettingsChannels() {
-      const container = document.getElementById('settings-channel-tags');
-      const channels = loadChannels();
+      const channels = getStoredChannels();
+      const container = document.getElementById('setting-channels-list');
       container.innerHTML = channels.map(ch => `
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs bg-slate-100 text-slate-700 font-medium">
           ${ch}
-          <button type="button" onclick="removeChannel('${ch}')" class="text-slate-400 hover:text-rose-600">✕</button>
+          <button onclick="removeCustomChannel('${ch}')" class="ml-1.5 text-slate-400 hover:text-rose-600 font-bold text-sm">✕</button>
         </span>
       `).join('');
     }
 
-    function populateChannelDropdowns() {
-      const channels = loadChannels();
+    function populateChannelFilterSelect() {
+      const select = document.getElementById('filter-channel');
+      const channels = getStoredChannels();
+      const all = [...channels, PLATFORM_CHANNEL];
       
-      // Filter channel dropdown
-      const filterSelect = document.getElementById('filter-channel');
-      let filterHtml = `<option value="ALL">所有渠道</option>`;
-      channels.forEach(ch => filterHtml += `<option value="${ch}">${ch}</option>`);
-      filterHtml += `<option value="網購平台">網購平台</option>`;
-      filterSelect.innerHTML = filterHtml;
-
-      // Edit channel dropdown
-      const editSelect = document.getElementById('edit-channel');
-      let editHtml = '';
-      channels.forEach(ch => editHtml += `<option value="${ch}">${ch}</option>`);
-      editHtml += `<option value="網購平台">網購平台</option>`;
-      editSelect.innerHTML = editHtml;
+      const currentVal = select.value;
+      select.innerHTML = `<option value="ALL">全部渠道</option>` + all.map(c => `<option value="${c}">${c}</option>`).join('');
+      if (all.includes(currentVal)) select.value = currentVal;
     }
 
-    /* ==========================================================================
-       5. TWO-LEVEL CATEGORY SYSTEM & AUTO-CLASSIFICATION
-       ========================================================================== */
-    function updateSubCategoryDropdown(prefix = 'add') {
-      const mainCat = document.getElementById(`${prefix}-main-cat`).value;
-      const subCatSelect = document.getElementById(`${prefix}-sub-cat`);
-      const options = CATEGORIES[mainCat] || CATEGORIES['女兒'];
-      
-      subCatSelect.innerHTML = options.map(sub => `<option value="${sub}">${sub}</option>`).join('');
-    }
-
-    function cleanProductName(text) {
-      if (!text) return '';
-      // Strip seller codes/prefixes like 1589J*, 0435G*, |H1043, |T1023, 貳六_11團(25)_
-      return text
-        .replace(/^[0-9A-Za-z]+[*|]/g, '')
-        .replace(/^\|[A-Za-z0-9]+/g, '')
-        .replace(/^[\u4e00-\u9fa5A-Za-z0-9]+_\d+團\(\d+\)_/g, '')
-        .trim();
-    }
-
-    function autoSelectCategoryByText() {
-      const name = document.getElementById('add-name').value;
-      const spec = document.getElementById('add-spec').value;
-      const combined = `${name} ${spec}`;
-
-      const cleanedName = cleanProductName(name);
-      if (cleanedName !== name && cleanedName.length > 0) {
-        document.getElementById('add-name').value = cleanedName;
-      }
-
-      // Keyword rules matching
-      if (/130|140|裙|褲裙|裙褲|粉|庫洛米|美樂蒂|HelloKitty|公主|髮圈/i.test(combined)) {
-        document.getElementById('add-main-cat').value = '女兒';
-        updateSubCategoryDropdown('add');
-      } else if (/120|TOMICA|小汽車|老虎|蝙蝠俠|恐龍|拼圖/i.test(combined)) {
-        document.getElementById('add-main-cat').value = '兒子';
-        updateSubCategoryDropdown('add');
-      } else if (/成人|精華液|棉片|一條根|滾珠棒|髮油|護髮|針織衫|抓夾/i.test(combined)) {
-        document.getElementById('add-main-cat').value = '自用';
-        updateSubCategoryDropdown('add');
-      } else if (/洗手乳|清潔|馬桶|凝膠球/i.test(combined)) {
-        document.getElementById('add-main-cat').value = '家用';
-        updateSubCategoryDropdown('add');
-        document.getElementById('add-sub-cat').value = '清潔用品';
-      } else if (/軟糖|昆布|辣椒醬|代餐|爆米花|零食|禮盒/i.test(combined)) {
-        document.getElementById('add-main-cat').value = '家用';
-        updateSubCategoryDropdown('add');
-        document.getElementById('add-sub-cat').value = '食品';
-      }
-    }
-
-    /* ==========================================================================
-       6. DUPLICATE ORDER DETECTION (FUZZY MATCHING)
-       ========================================================================== */
-    async function onProductNameInput() {
-      autoSelectCategoryByText();
-      const inputVal = document.getElementById('add-name').value.trim();
-      const warningPanel = document.getElementById('duplicate-warning');
-      const listContainer = document.getElementById('duplicate-items-list');
-
-      if (!inputVal || inputVal.length < 2) {
-        warningPanel.classList.add('hidden');
-        return;
-      }
-
-      const allOrders = await dbGetAll('orders');
-      const monthsLimit = parseInt(document.getElementById('dup-range').value) || 3;
-      
-      const now = new Date();
-      const cutoffDate = new Date();
-      cutoffDate.setMonth(now.getMonth() - monthsLimit);
-
-      // Filter and fuzzy match
-      const duplicates = allOrders.filter(order => {
-        const normalized = normalizeOrder(order);
-        const orderDate = new Date(normalized.date);
-        if (monthsLimit < 999 && orderDate < cutoffDate) return false;
-
-        return checkFuzzyMatch(inputVal, normalized.name);
-      });
-
-      if (duplicates.length === 0) {
-        warningPanel.classList.add('hidden');
-      } else {
-        warningPanel.classList.remove('hidden');
-        listContainer.innerHTML = duplicates.map(item => {
-          const norm = normalizeOrder(item);
-          return `
-            <div class="bg-white p-2 rounded-lg border border-amber-200 flex items-center justify-between text-xs">
-              <div class="flex items-center gap-2 min-w-0">
-                ${norm.image ? `<img src="${norm.image}" class="w-8 h-8 rounded object-cover shrink-0">` : `<div class="w-8 h-8 rounded bg-amber-100 flex items-center justify-center text-amber-600 font-bold shrink-0">🛍️</div>`}
-                <div class="min-w-0">
-                  <div class="font-bold text-slate-800 truncate">${norm.name}</div>
-                  <div class="text-[10px] text-slate-500">${norm.date} · ${norm.channel} · ${norm.mainCategory}-${norm.subCategory} ${norm.spec ? '· (' + norm.spec + ')' : ''}</div>
-                </div>
-              </div>
-              <div class="font-bold text-slate-800 shrink-0 ml-2">NT$ ${norm.price}</div>
-            </div>
-          `;
-        }).join('');
-      }
-    }
-
-    function checkFuzzyMatch(str1, str2) {
-      if (!str1 || !str2) return false;
-      const s1 = str1.toLowerCase().replace(/\s+/g, '');
-      const s2 = str2.toLowerCase().replace(/\s+/g, '');
-
-      if (s1.includes(s2) || s2.includes(s1)) return true;
-
-      // Character intersection count
-      const set1 = new Set(s1);
-      let common = 0;
-      set1.forEach(char => {
-        if (s2.includes(char)) common++;
-      });
-
-      const matchRatio = common / Math.max(s1.length, s2.length);
-      return matchRatio >= 0.5;
-    }
-
-    /* ==========================================================================
-       7. IMAGE UPLOAD & CANVAS COMPRESSION
-       ========================================================================== */
-    function handleImageSelect(e) {
+    // -----------------------------------------------------------------
+    // IMAGE HANDLING & CANVAS COMPRESSION
+    // -----------------------------------------------------------------
+    function handleImageUpload(e, prefix) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = function(evt) {
         const img = new Image();
-        img.onload = () => {
+        img.onload = function() {
           const canvas = document.createElement('canvas');
           const maxDim = 600;
           let w = img.width;
           let h = img.height;
-
+          
           if (w > maxDim || h > maxDim) {
             if (w > h) {
               h = Math.round((h * maxDim) / w);
@@ -1010,59 +1050,823 @@
           canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          currentImageData = canvas.toDataURL('image/jpeg', 0.7);
 
-          // Render Preview
-          const previewImg = document.getElementById('img-preview');
-          previewImg.src = currentImageData;
-          previewImg.classList.remove('hidden');
-          document.getElementById('btn-remove-img').classList.remove('hidden');
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          
+          if (prefix === 'add') {
+            currentImageAddBase64 = compressedBase64;
+            document.getElementById('add-img-preview').src = compressedBase64;
+            document.getElementById('add-img-preview').classList.remove('hidden');
+            document.getElementById('btn-remove-add-img').classList.remove('hidden');
+          } else {
+            currentImageEditBase64 = compressedBase64;
+            document.getElementById('edit-img-preview').src = compressedBase64;
+            document.getElementById('edit-img-preview').classList.remove('hidden');
+            document.getElementById('btn-remove-edit-img').classList.remove('hidden');
+          }
         };
-        img.src = event.target.result;
+        img.src = evt.target.result;
       };
       reader.readAsDataURL(file);
     }
 
-    function removeImage() {
-      currentImageData = null;
-      document.getElementById('input-image').value = '';
-      const previewImg = document.getElementById('img-preview');
-      previewImg.src = '';
-      previewImg.classList.add('hidden');
-      document.getElementById('btn-remove-img').classList.add('hidden');
+    function clearImage(prefix) {
+      if (prefix === 'add') {
+        currentImageAddBase64 = null;
+        document.getElementById('add-img-input').value = '';
+        document.getElementById('add-img-preview').classList.add('hidden');
+        document.getElementById('btn-remove-add-img').classList.add('hidden');
+      } else {
+        currentImageEditBase64 = null;
+        document.getElementById('edit-img-input').value = '';
+        document.getElementById('edit-img-preview').classList.add('hidden');
+        document.getElementById('btn-remove-edit-img').classList.add('hidden');
+      }
     }
 
-    /* ==========================================================================
-       8. GEMINI AI SCREENSHOT PARSING
-       ========================================================================== */
-    async function runAiAnalysis() {
-      const apiKey = localStorage.getItem('dib_gemini_key');
-      if (!apiKey) {
-        showToast('請先至「設定」頁面填寫 Gemini API Key！');
-        switchTab('settings');
-        return;
+    // -----------------------------------------------------------------
+    // REAL-TIME DUPLICATE CHECK
+    // -----------------------------------------------------------------
+    async function onAddFormChange() {
+      const name = document.getElementById('add-name').value.trim();
+      const spec = document.getElementById('add-spec').value.trim();
+
+      // Smart Category auto-classification if name changed
+      if (name) {
+        const classified = autoClassifyCategory(name, spec);
+        if (classified) {
+          document.getElementById('add-main-cat').value = classified.main;
+          onMainCatChange('add');
+          document.getElementById('add-sub-cat').value = classified.sub;
+        }
       }
-      if (!currentImageData) {
-        showToast('請先選擇或上傳一張商品截圖！');
+
+      if (!name || name.length < 2) {
+        document.getElementById('add-dup-warning').classList.add('hidden');
         return;
       }
 
-      const btn = document.getElementById('btn-ai-analyze');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = `<span>⏳</span> AI 分析中...`;
-      btn.disabled = true;
+      const orders = await getAllOrdersDB();
+      const now = new Date();
+      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+
+      // Filter recent orders
+      const recentOrders = orders.filter(o => new Date(o.date) >= threeMonthsAgo);
+
+      // Fuzzy check by character set matching
+      const targetChars = new Set(Array.from(name.replace(/\s+/g, '')));
+      
+      const duplicates = recentOrders.filter(o => {
+        const existingName = (o.name || '').replace(/\s+/g, '');
+        if (existingName.includes(name) || name.includes(existingName)) return true;
+
+        // Character intersection match
+        let matchCount = 0;
+        for (let char of targetChars) {
+          if (existingName.includes(char)) matchCount++;
+        }
+        return matchCount >= Math.min(3, targetChars.size);
+      });
+
+      const warningBox = document.getElementById('add-dup-warning');
+      const listContainer = document.getElementById('add-dup-list');
+
+      if (duplicates.length > 0) {
+        warningBox.classList.remove('hidden');
+        listContainer.innerHTML = duplicates.map(d => `
+          <div class="flex justify-between items-center py-0.5 border-b border-amber-200/50">
+            <span>🔹 <strong>${d.channel}</strong>: ${d.name} (${d.spec || '無規格'}) - $${d.price}x${d.qty}</span>
+            <span class="text-[10px] text-amber-600">${d.date}</span>
+          </div>
+        `).join('');
+      } else {
+        warningBox.classList.add('hidden');
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // ADD ORDER FUNCTIONALITY
+    // -----------------------------------------------------------------
+    async function saveOrder(keepForNextSpec = false) {
+      const nameInput = document.getElementById('add-name');
+      const priceInput = document.getElementById('add-price');
+      const qtyInput = document.getElementById('add-qty');
+      const dateInput = document.getElementById('add-date');
+
+      const name = nameInput.value.trim();
+      const price = parseFloat(priceInput.value);
+      const qty = parseInt(qtyInput.value) || 1;
+      const date = dateInput.value;
+      const spec = document.getElementById('add-spec').value.trim();
+      const mainCat = document.getElementById('add-main-cat').value;
+      const subCat = document.getElementById('add-sub-cat').value;
+      const note = document.getElementById('add-note').value.trim();
+
+      if (!name) {
+        showToast('請填寫品項名稱', 'error');
+        nameInput.focus();
+        return;
+      }
+      if (isNaN(price) || price < 0) {
+        showToast('請填寫有效的單價', 'error');
+        priceInput.focus();
+        return;
+      }
+      if (!date) {
+        showToast('請選擇喊單日期', 'error');
+        return;
+      }
+
+      // If channel is 網購平台, automatically mark as paid
+      const isPaid = (currentSelectedAddChannel === PLATFORM_CHANNEL);
+
+      const newOrder = {
+        id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+        channel: currentSelectedAddChannel,
+        name: name,
+        spec: spec,
+        price: price,
+        qty: qty,
+        mainCategory: mainCat,
+        subCategory: subCat,
+        date: date,
+        isOutOfStock: false,
+        isPaid: isPaid,
+        note: note,
+        image: currentImageAddBase64,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
       try {
-        const base64Data = currentImageData.split(',')[1];
-        const promptText = `請分析這張團購截圖，以 JSON 格式回應 (只回覆 JSON，不要 markdown 標記):
-        {
-          "name": "商品名稱",
-          "spec": "顏色/尺寸/規格",
-          "price": 數字單價,
-          "qty": 數量,
-          "mainCategory": "女兒" 或 "兒子" 或 "自用" 或 "家用"
-        }`;
+        await saveOrderDB(newOrder);
+        showToast(isPaid ? '已儲存喊單 (網購平台自動標記為已付款)' : '喊單紀錄儲存成功！');
+        
+        updateHeaderStats();
+        renderOrdersList();
 
+        if (keepForNextSpec) {
+          // Clear only spec and note
+          document.getElementById('add-spec').value = '';
+          document.getElementById('add-note').value = '';
+          document.getElementById('add-spec').focus();
+        } else {
+          // Reset entire form
+          nameInput.value = '';
+          document.getElementById('add-spec').value = '';
+          priceInput.value = '';
+          qtyInput.value = '1';
+          document.getElementById('add-note').value = '';
+          clearImage('add');
+          document.getElementById('add-dup-warning').classList.add('hidden');
+        }
+      } catch (e) {
+        showToast('儲存失敗：' + e.message, 'error');
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // ORDER SEARCH & CARDS RENDER (TAB 2)
+    // -----------------------------------------------------------------
+    function setDateFilter(range) {
+      selectedDateRange = range;
+      document.querySelectorAll('.date-pill').forEach(btn => {
+        if (btn.dataset.range === range) {
+          btn.className = 'date-pill px-2.5 py-1 text-xs rounded-lg border bg-rose-50 text-rose-600 border-rose-300 font-semibold';
+        } else {
+          btn.className = 'date-pill px-2.5 py-1 text-xs rounded-lg border text-slate-600 border-slate-200';
+        }
+      });
+
+      const customBox = document.getElementById('custom-date-box');
+      if (range === 'custom') {
+        customBox.classList.remove('hidden');
+      } else {
+        customBox.classList.add('hidden');
+      }
+
+      renderOrdersList();
+    }
+
+    async function renderOrdersList() {
+      const orders = await getAllOrdersDB();
+      const keyword = document.getElementById('search-keyword').value.trim().toLowerCase();
+      const filterMainCat = document.getElementById('filter-main-cat').value;
+      const filterChannel = document.getElementById('filter-channel').value;
+
+      let filtered = orders;
+
+      // Filter by Keyword
+      if (keyword) {
+        filtered = filtered.filter(o => {
+          const matchName = (o.name || '').toLowerCase().includes(keyword);
+          const matchSpec = (o.spec || '').toLowerCase().includes(keyword);
+          const matchChannel = (o.channel || '').toLowerCase().includes(keyword);
+          const matchNote = (o.note || '').toLowerCase().includes(keyword);
+          return matchName || matchSpec || matchChannel || matchNote;
+        });
+      }
+
+      // Filter by Category
+      if (filterMainCat !== 'ALL') {
+        filtered = filtered.filter(o => o.mainCategory === filterMainCat);
+      }
+
+      // Filter by Channel
+      if (filterChannel !== 'ALL') {
+        filtered = filtered.filter(o => o.channel === filterChannel);
+      }
+
+      // Filter by Date Range
+      const now = new Date();
+      if (selectedDateRange === '1m') {
+        const start = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        filtered = filtered.filter(o => new Date(o.date) >= start);
+      } else if (selectedDateRange === '3m') {
+        const start = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+        filtered = filtered.filter(o => new Date(o.date) >= start);
+      } else if (selectedDateRange === '6m') {
+        const start = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+        filtered = filtered.filter(o => new Date(o.date) >= start);
+      } else if (selectedDateRange === '1y') {
+        const start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        filtered = filtered.filter(o => new Date(o.date) >= start);
+      } else if (selectedDateRange === 'custom') {
+        const startDate = document.getElementById('filter-start-date').value;
+        const endDate = document.getElementById('filter-end-date').value;
+        if (startDate) filtered = filtered.filter(o => o.date >= startDate);
+        if (endDate) filtered = filtered.filter(o => o.date <= endDate);
+      }
+
+      // Sort by date descending
+      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      // Metrics calculation
+      let totalAmount = 0;
+      filtered.forEach(o => {
+        if (!o.isOutOfStock) {
+          totalAmount += (o.price * o.qty);
+        }
+      });
+
+      document.getElementById('search-result-count').textContent = `共 ${filtered.length} 筆訂單`;
+      document.getElementById('search-result-subtotal').textContent = `有效總額：$${totalAmount.toLocaleString()}`;
+
+      const container = document.getElementById('orders-list');
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-slate-400 space-y-2">
+            <span class="text-4xl">🛍️</span>
+            <p class="text-xs">查無符合條件的喊單紀錄</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(o => {
+        const isOut = o.isOutOfStock;
+        const isPaid = o.isPaid;
+        const effectivePrice = isOut ? 0 : (o.price * o.qty);
+
+        // Status Badges
+        let statusBadge = '';
+        if (isOut) {
+          statusBadge = '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 text-slate-600">🚫 斷貨</span>';
+        } else if (isPaid) {
+          statusBadge = '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">✅ 已付款</span>';
+        } else {
+          statusBadge = '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700">⏳ 未付款</span>';
+        }
+
+        const thumbnail = o.image 
+          ? `<img src="${o.image}" class="w-14 h-14 object-cover rounded-xl border border-slate-100 flex-shrink-0" alt="thumb">`
+          : `<div class="w-14 h-14 bg-rose-50 text-rose-300 rounded-xl flex items-center justify-center text-xl flex-shrink-0 border border-rose-100">🛍️</div>`;
+
+        return `
+          <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 space-y-2 relative group hover:border-rose-200 transition">
+            
+            <!-- Top Badges Row -->
+            <div class="flex justify-between items-center text-xs">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 font-bold text-[11px]">${o.channel}</span>
+                <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-medium">${o.mainCategory}-${o.subCategory}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] text-slate-400 font-mono">${o.date}</span>
+                ${statusBadge}
+              </div>
+            </div>
+
+            <!-- Content Row -->
+            <div class="flex space-x-3 items-center">
+              ${thumbnail}
+              <div class="flex-1 min-w-0 space-y-0.5">
+                <h4 class="text-sm font-bold text-slate-800 truncate ${isOut ? 'line-through text-slate-400' : ''}">${o.name}</h4>
+                <p class="text-xs text-slate-500 truncate">規格: ${o.spec || '無'} | 數量: ${o.qty}</p>
+                ${o.note ? `<p class="text-[11px] text-slate-400 italic truncate">註: ${o.note}</p>` : ''}
+              </div>
+              <div class="text-right flex-shrink-0">
+                <div class="text-xs text-slate-400 font-medium">$${o.price} x ${o.qty}</div>
+                <div class="text-sm font-extrabold ${isOut ? 'line-through text-slate-400' : 'text-rose-600'}">$${effectivePrice.toLocaleString()}</div>
+              </div>
+            </div>
+
+            <!-- Action Buttons Footer (PROMINENT EDIT & DELETE) -->
+            <div class="pt-2 border-t border-slate-100 flex justify-end items-center space-x-2">
+              <button onclick="openEditModal('${o.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                編輯
+              </button>
+              <button onclick="confirmDeleteOrder('${o.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 rounded-lg text-xs font-medium transition flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                刪除
+              </button>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    // -----------------------------------------------------------------
+    // EDIT ORDER MODAL LOGIC
+    // -----------------------------------------------------------------
+    async function openEditModal(orderId) {
+      const orders = await getAllOrdersDB();
+      const order = orders.find(o => o.id === orderId);
+      if (!order) {
+        showToast('找不到該筆訂單', 'error');
+        return;
+      }
+
+      document.getElementById('edit-id').value = order.id;
+      document.getElementById('edit-name').value = order.name || '';
+      document.getElementById('edit-spec').value = order.spec || '';
+      document.getElementById('edit-price').value = order.price || 0;
+      document.getElementById('edit-qty').value = order.qty || 1;
+      document.getElementById('edit-date').value = order.date || '';
+      document.getElementById('edit-note').value = order.note || '';
+      document.getElementById('edit-is-outofstock').checked = !!order.isOutOfStock;
+      document.getElementById('edit-is-paid').checked = !!order.isPaid;
+
+      // Select Channel
+      currentSelectedEditChannel = order.channel || DEFAULT_CHANNELS[0];
+      renderChannelPills();
+
+      // Select Category
+      document.getElementById('edit-main-cat').value = order.mainCategory || '女兒';
+      onMainCatChange('edit');
+      document.getElementById('edit-sub-cat').value = order.subCategory || '衣服';
+
+      // Load Image Preview
+      currentImageEditBase64 = order.image || null;
+      if (order.image) {
+        document.getElementById('edit-img-preview').src = order.image;
+        document.getElementById('edit-img-preview').classList.remove('hidden');
+        document.getElementById('btn-remove-edit-img').classList.remove('hidden');
+      } else {
+        document.getElementById('edit-img-preview').classList.add('hidden');
+        document.getElementById('btn-remove-edit-img').classList.add('hidden');
+      }
+
+      document.getElementById('modal-edit').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('modal-edit').classList.add('hidden');
+    }
+
+    async function saveEditModal() {
+      const id = document.getElementById('edit-id').value;
+      const name = document.getElementById('edit-name').value.trim();
+      const price = parseFloat(document.getElementById('edit-price').value);
+      const qty = parseInt(document.getElementById('edit-qty').value) || 1;
+      const date = document.getElementById('edit-date').value;
+
+      if (!name) {
+        showToast('請填寫品項名稱', 'error');
+        return;
+      }
+      if (isNaN(price) || price < 0) {
+        showToast('請填寫有效單價', 'error');
+        return;
+      }
+      if (!date) {
+        showToast('請選擇日期', 'error');
+        return;
+      }
+
+      const orders = await getAllOrdersDB();
+      const existing = orders.find(o => o.id === id);
+
+      const updatedOrder = {
+        ...existing,
+        id: id,
+        channel: currentSelectedEditChannel,
+        name: name,
+        spec: document.getElementById('edit-spec').value.trim(),
+        price: price,
+        qty: qty,
+        mainCategory: document.getElementById('edit-main-cat').value,
+        subCategory: document.getElementById('edit-sub-cat').value,
+        date: date,
+        isOutOfStock: document.getElementById('edit-is-outofstock').checked,
+        isPaid: document.getElementById('edit-is-paid').checked,
+        note: document.getElementById('edit-note').value.trim(),
+        image: currentImageEditBase64,
+        updatedAt: new Date().toISOString()
+      };
+
+      try {
+        await saveOrderDB(updatedOrder);
+        showToast('訂單修改成功！');
+        closeEditModal();
+        
+        updateHeaderStats();
+        renderOrdersList();
+        renderSettlementView();
+      } catch (e) {
+        showToast('修改失敗：' + e.message, 'error');
+      }
+    }
+
+    async function deleteOrderFromModal() {
+      const id = document.getElementById('edit-id').value;
+      await confirmDeleteOrder(id);
+      closeEditModal();
+    }
+
+    async function confirmDeleteOrder(id) {
+      if (!confirm('確定要刪除這筆喊單紀錄嗎？刪除後無法復原。')) return;
+
+      try {
+        await deleteOrderDB(id);
+        showToast('訂單已成功刪除');
+        updateHeaderStats();
+        renderOrdersList();
+        renderSettlementView();
+      } catch (e) {
+        showToast('刪除失敗：' + e.message, 'error');
+      }
+    }
+
+    // Quick inline out-of-stock toggle from settlement list
+    async function toggleInlineOutOfStock(orderId, isOut) {
+      const orders = await getAllOrdersDB();
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      order.isOutOfStock = isOut;
+      order.updatedAt = new Date().toISOString();
+      
+      await saveOrderDB(order);
+      showToast(isOut ? '已標記為斷貨' : '已取消斷貨標記');
+      
+      updateHeaderStats();
+      renderOrdersList();
+      renderSettlementView();
+    }
+
+    // -----------------------------------------------------------------
+    // MONTHLY SETTLEMENT & BATCHES (TAB 3)
+    // -----------------------------------------------------------------
+    async function renderSettlementView() {
+      const orders = await getAllOrdersDB();
+      const settlements = await getAllSettlementsDB();
+
+      // Filter unpaid orders excluding 網購平台
+      const unpaidOrders = orders.filter(o => !o.isPaid && o.channel !== PLATFORM_CHANNEL);
+
+      // Grand total unpaid
+      let grandTotal = 0;
+      unpaidOrders.forEach(o => {
+        if (!o.isOutOfStock) grandTotal += (o.price * o.qty);
+      });
+      document.getElementById('unpaid-grand-total').textContent = `$${grandTotal.toLocaleString()}`;
+
+      // Update Nav Badge
+      const navBadge = document.getElementById('nav-settle-badge');
+      if (unpaidOrders.length > 0) {
+        navBadge.classList.remove('hidden');
+      } else {
+        navBadge.classList.add('hidden');
+      }
+
+      // Group by YYYY-MM and Channel
+      const batchesMap = {};
+      unpaidOrders.forEach(o => {
+        const ym = o.date ? o.date.substring(0, 7) : '未定義月份';
+        const key = `${ym}___${o.channel}`;
+        if (!batchesMap[key]) {
+          batchesMap[key] = {
+            yearMonth: ym,
+            channel: o.channel,
+            items: []
+          };
+        }
+        batchesMap[key].items.push(o);
+      });
+
+      const unpaidContainer = document.getElementById('unpaid-batches-list');
+      const batchKeys = Object.keys(batchesMap);
+
+      if (batchKeys.length === 0) {
+        unpaidContainer.innerHTML = `
+          <div class="text-center py-12 text-slate-400 space-y-2">
+            <span class="text-4xl">🎉</span>
+            <p class="text-xs">太棒了！目前無任何未付清款項</p>
+          </div>
+        `;
+      } else {
+        // Sort keys by Month descending
+        batchKeys.sort().reverse();
+
+        unpaidContainer.innerHTML = batchKeys.map(key => {
+          const batch = batchesMap[key];
+          let batchSubtotal = 0;
+          let activeCount = 0;
+
+          batch.items.forEach(item => {
+            if (!item.isOutOfStock) {
+              batchSubtotal += (item.price * item.qty);
+              activeCount++;
+            }
+          });
+
+          return `
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+              
+              <!-- Batch Header -->
+              <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                <div>
+                  <span class="px-2.5 py-1 bg-rose-50 text-rose-600 font-bold rounded-lg text-xs mr-2">${batch.channel}</span>
+                  <span class="text-xs font-bold text-slate-700">${batch.yearMonth} 月份對帳</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-[10px] text-slate-400">小計</span>
+                  <div class="text-sm font-extrabold text-rose-600">$${batchSubtotal.toLocaleString()}</div>
+                </div>
+              </div>
+
+              <!-- Item List -->
+              <div class="space-y-2">
+                ${batch.items.map(item => {
+                  const isOut = item.isOutOfStock;
+                  return `
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                      <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                        <label class="flex items-center gap-1 cursor-pointer flex-shrink-0" title="切換斷貨狀態">
+                          <input type="checkbox" ${isOut ? 'checked' : ''} onchange="toggleInlineOutOfStock('${item.id}', this.checked)" class="w-4 h-4 text-rose-600 rounded">
+                          <span class="text-[10px] font-bold ${isOut ? 'text-slate-400' : 'text-slate-500'}">斷貨</span>
+                        </label>
+                        <div class="min-w-0 flex-1">
+                          <div class="font-bold text-slate-800 truncate ${isOut ? 'line-through text-slate-400' : ''}">${item.name}</div>
+                          <div class="text-[11px] text-slate-500">規格: ${item.spec || '無'} | $${item.price} x ${item.qty}</div>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
+                        <span class="font-extrabold ${isOut ? 'line-through text-slate-400' : 'text-slate-700'}">
+                          $${isOut ? 0 : (item.price * item.qty).toLocaleString()}
+                        </span>
+                        <!-- CLEARLY VISIBLE EDIT BUTTON -->
+                        <button onclick="openEditModal('${item.id}')" class="px-2 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-md font-bold text-[11px] flex items-center gap-0.5">
+                          ✏️ 編輯
+                        </button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+
+              <!-- Batch Action -->
+              <div class="pt-1">
+                <button onclick="openBatchSettleModal('${batch.yearMonth}', '${batch.channel}', ${batchSubtotal}, ${activeCount}, '${encodeURIComponent(JSON.stringify(batch.items.map(i => i.id)))}')" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow transition">
+                  整批標記已付清 ($${batchSubtotal.toLocaleString()})
+                </button>
+              </div>
+
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render History View
+      renderHistorySettlements(settlements);
+    }
+
+    function renderHistorySettlements(settlements) {
+      const historyContainer = document.getElementById('history-settlements-list');
+      
+      if (!settlements || settlements.length === 0) {
+        historyContainer.innerHTML = `
+          <div class="text-center py-12 text-slate-400 space-y-2">
+            <span class="text-4xl">📜</span>
+            <p class="text-xs">尚無已完成的對帳紀錄</p>
+          </div>
+        `;
+        return;
+      }
+
+      settlements.sort((a, b) => new Date(b.paidDate || b.createdAt) - new Date(a.paidDate || a.createdAt));
+
+      historyContainer.innerHTML = settlements.map(s => `
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+          
+          <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+            <div>
+              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded text-xs mr-1.5">${s.channel}</span>
+              <span class="text-xs font-bold text-slate-700">${s.yearMonth} 月對帳單</span>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400">實付總額</span>
+              <div class="text-sm font-extrabold text-emerald-600">$${(s.finalTotal || 0).toLocaleString()}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl">
+            <div>商品小計: <strong>$${(s.subtotal || 0).toLocaleString()}</strong></div>
+            <div>運費: <strong>+$${s.shipping || 0}</strong></div>
+            <div>購物金/折抵: <strong>-$${s.discount || 0}</strong></div>
+            <div>付款日期: <strong>${s.paidDate || '未註明'}</strong></div>
+            ${s.note ? `<div class="col-span-2 text-[11px] text-slate-400 border-t border-slate-200/50 pt-1 mt-1">備註: ${s.note}</div>` : ''}
+          </div>
+
+          <div class="flex justify-between items-center pt-1 text-xs">
+            <span class="text-[11px] text-slate-400">內含 ${s.itemIds ? s.itemIds.length : 0} 筆品項</span>
+            <button onclick="revertSettlementBatch('${s.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-lg transition text-xs flex items-center gap-1">
+              ↩️ 退回未付款
+            </button>
+          </div>
+
+        </div>
+      `).join('');
+    }
+
+    // -----------------------------------------------------------------
+    // BATCH SETTLEMENT MODAL LOGIC
+    // -----------------------------------------------------------------
+    function openBatchSettleModal(yearMonth, channel, subtotal, itemCounts, itemIdsJson) {
+      const itemIds = JSON.parse(decodeURIComponent(itemIdsJson));
+
+      currentBatchSettleData = {
+        yearMonth,
+        channel,
+        subtotal,
+        itemIds
+      };
+
+      document.getElementById('settle-modal-channel').textContent = channel;
+      document.getElementById('settle-modal-month').textContent = yearMonth;
+      document.getElementById('settle-modal-item-count').textContent = itemCounts;
+      document.getElementById('settle-modal-subtotal').textContent = `$${subtotal.toLocaleString()}`;
+
+      document.getElementById('settle-shipping').value = '0';
+      document.getElementById('settle-discount').value = '0';
+      document.getElementById('settle-pay-date').valueAsDate = new Date();
+      document.getElementById('settle-note').value = '';
+
+      calculateFinalSettleTotal();
+      document.getElementById('modal-batch-settle').classList.remove('hidden');
+    }
+
+    function calculateFinalSettleTotal() {
+      if (!currentBatchSettleData) return;
+
+      const subtotal = currentBatchSettleData.subtotal;
+      const shipping = parseFloat(document.getElementById('settle-shipping').value) || 0;
+      const discount = parseFloat(document.getElementById('settle-discount').value) || 0;
+
+      const finalTotal = Math.max(0, subtotal + shipping - discount);
+      document.getElementById('settle-modal-final-total').textContent = `$${finalTotal.toLocaleString()}`;
+    }
+
+    function closeBatchSettleModal() {
+      document.getElementById('modal-batch-settle').classList.add('hidden');
+      currentBatchSettleData = null;
+    }
+
+    async function confirmBatchSettle() {
+      if (!currentBatchSettleData) return;
+
+      const { yearMonth, channel, subtotal, itemIds } = currentBatchSettleData;
+      const shipping = parseFloat(document.getElementById('settle-shipping').value) || 0;
+      const discount = parseFloat(document.getElementById('settle-discount').value) || 0;
+      const paidDate = document.getElementById('settle-pay-date').value;
+      const note = document.getElementById('settle-note').value.trim();
+      const finalTotal = Math.max(0, subtotal + shipping - discount);
+
+      // Update all orders in batch to isPaid = true
+      const orders = await getAllOrdersDB();
+      for (const id of itemIds) {
+        const order = orders.find(o => o.id === id);
+        if (order) {
+          order.isPaid = true;
+          order.updatedAt = new Date().toISOString();
+          await saveOrderDB(order);
+        }
+      }
+
+      // Save settlement record
+      const settlementRecord = {
+        id: 'set_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+        yearMonth,
+        channel,
+        subtotal,
+        shipping,
+        discount,
+        finalTotal,
+        paidDate,
+        note,
+        itemIds,
+        createdAt: new Date().toISOString()
+      };
+
+      await saveSettlementDB(settlementRecord);
+
+      showToast(`【${channel} ${yearMonth}】已完成結帳對帳！`);
+      closeBatchSettleModal();
+
+      updateHeaderStats();
+      renderOrdersList();
+      renderSettlementView();
+    }
+
+    // Revert Settled Batch back to unpaid
+    async function revertSettlementBatch(settlementId) {
+      if (!confirm('確定要退回此筆對帳紀錄嗎？所有包含的訂單將恢復為未付款狀態。')) return;
+
+      const settlements = await getAllSettlementsDB();
+      const record = settlements.find(s => s.id === settlementId);
+      if (!record) return;
+
+      const orders = await getAllOrdersDB();
+      if (record.itemIds && record.itemIds.length > 0) {
+        for (const id of record.itemIds) {
+          const order = orders.find(o => o.id === id);
+          if (order) {
+            order.isPaid = false;
+            order.updatedAt = new Date().toISOString();
+            await saveOrderDB(order);
+          }
+        }
+      }
+
+      await deleteSettlementDB(settlementId);
+      showToast('已恢復為未付款狀態');
+
+      updateHeaderStats();
+      renderOrdersList();
+      renderSettlementView();
+    }
+
+    // -----------------------------------------------------------------
+    // GEMINI SCREENSHOT AI INTEGRATION
+    // -----------------------------------------------------------------
+    function saveGeminiKey() {
+      const key = document.getElementById('setting-gemini-key').value.trim();
+      if (!key) {
+        localStorage.removeItem('did_i_buy_gemini_key');
+        document.getElementById('btn-ai-parse').classList.add('hidden');
+        showToast('已移除 API Key');
+        return;
+      }
+      localStorage.setItem('did_i_buy_gemini_key', key);
+      document.getElementById('btn-ai-parse').classList.remove('hidden');
+      showToast('Gemini API Key 儲存成功');
+    }
+
+    function triggerAiParse() {
+      const apiKey = localStorage.getItem('did_i_buy_gemini_key');
+      if (!apiKey) {
+        showToast('請先至「設定」頁面輸入 Gemini API Key', 'error');
+        return;
+      }
+      document.getElementById('add-img-input').click();
+    }
+
+    async function processAiParseFromBase64(base64Data) {
+      const apiKey = localStorage.getItem('did_i_buy_gemini_key');
+      if (!apiKey) return;
+
+      showToast('🤖 AI 正辨識喊單截圖中...', 'warning');
+
+      const pureBase64 = base64Data.replace(/^data:image\/(png|jpeg|webp);base64,/, '');
+
+      const promptText = `你是一個團購訂單截圖解析助手。請從這張圖片中提取商品訂單資訊，並僅輸出以下標準 JSON 格式（不要有 markdown codeblock，不要有額外文字）：
+{
+  "name": "商品名稱 (請自動剔除賣家編號如1589J*)",
+  "price": 數字價格,
+  "qty": 數量數字,
+  "spec": "規格或尺寸顏色",
+  "channel": "購買渠道名稱如Moby/Mina"
+}`;
+
+      try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1070,694 +1874,237 @@
             contents: [{
               parts: [
                 { text: promptText },
-                { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+                { inline_data: { mime_type: "image/jpeg", data: pureBase64 } }
               ]
             }]
           })
         });
 
         const data = await response.json();
-        const rawText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-        const parsed = JSON.parse(rawText);
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (rawText) {
+          const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+          const parsed = JSON.parse(cleanJson);
 
-        if (parsed.name) document.getElementById('add-name').value = cleanProductName(parsed.name);
-        if (parsed.spec) document.getElementById('add-spec').value = parsed.spec;
-        if (parsed.price) document.getElementById('add-price').value = parsed.price;
-        if (parsed.qty) document.getElementById('add-qty').value = parsed.qty;
-        if (parsed.mainCategory && CATEGORIES[parsed.mainCategory]) {
-          document.getElementById('add-main-cat').value = parsed.mainCategory;
-          updateSubCategoryDropdown('add');
+          if (parsed.name) document.getElementById('add-name').value = parsed.name;
+          if (parsed.price) document.getElementById('add-price').value = parsed.price;
+          if (parsed.qty) document.getElementById('add-qty').value = parsed.qty;
+          if (parsed.spec) document.getElementById('add-spec').value = parsed.spec;
+          if (parsed.channel) {
+            const channels = getStoredChannels();
+            if (channels.includes(parsed.channel)) {
+              selectChannel('add', parsed.channel);
+            }
+          }
+          
+          onAddFormChange();
+          showToast('✨ 截圖辨識完成，已自動填入！');
         }
-
-        autoSelectCategoryByText();
-        onProductNameInput();
-        showToast('✨ AI 辨識完成！已填入表單');
       } catch (err) {
         console.error(err);
-        showToast('AI 辨識失敗，請檢查 Key 或改為手動填寫');
-      } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        showToast('AI 辨識失敗，請手動填寫', 'error');
       }
     }
 
-    /* ==========================================================================
-       9. FORM SUBMISSION (ADD & CONTINUE MODE)
-       ========================================================================== */
-    async function handleFormSubmit(e) {
-      e.preventDefault();
+    // -----------------------------------------------------------------
+    // BACKUP & RESTORE DATA (INDEXEDDB SAFE & iOS COMPATIBLE)
+    // -----------------------------------------------------------------
+    // Backward-compatible normalizer for custom/imported JSON format
+    function normalizeOrder(raw) {
+      let mainCat = raw.mainCategory || raw.category || raw.cat1 || '自用';
+      let subCat = raw.subCategory || raw.subcategory || raw.cat2 || '其他';
 
-      const channel = document.getElementById('add-channel').value;
-      if (!channel) {
-        showToast('請選擇購買渠道！');
-        return;
+      if (raw.category && raw.category.includes('-')) {
+        const parts = raw.category.split('-');
+        mainCat = parts[0];
+        subCat = parts[1] || '其他';
       }
 
-      const isEcom = (channel === '網購平台');
-      const order = {
-        id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-        name: cleanProductName(document.getElementById('add-name').value.trim()),
-        spec: document.getElementById('add-spec').value.trim(),
-        qty: parseInt(document.getElementById('add-qty').value) || 1,
-        price: parseFloat(document.getElementById('add-price').value) || 0,
-        channel: channel,
-        mainCategory: document.getElementById('add-main-cat').value,
-        subCategory: document.getElementById('add-sub-cat').value,
-        date: document.getElementById('add-date').value,
-        notes: document.getElementById('add-notes').value.trim(),
-        image: currentImageData,
-        isPaid: isEcom, // 網購平台 defaults to isPaid=true
-        paidDate: isEcom ? document.getElementById('add-date').value : null,
-        isOutOfStock: false,
-        createdAt: new Date().toISOString()
+      if (!CATEGORIES[mainCat]) mainCat = '自用';
+      if (!CATEGORIES[mainCat].includes(subCat)) subCat = CATEGORIES[mainCat][0] || '其他';
+
+      return {
+        id: raw.id || ('ord_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7)),
+        channel: raw.channel || DEFAULT_CHANNELS[0],
+        name: raw.name || '未命名商品',
+        spec: raw.spec || '',
+        price: parseFloat(raw.price) || 0,
+        qty: parseInt(raw.qty) || 1,
+        mainCategory: mainCat,
+        subCategory: subCat,
+        date: raw.date || new Date().toISOString().substring(0, 10),
+        isOutOfStock: !!(raw.isOutOfStock || raw.outOfStock),
+        isPaid: !!(raw.isPaid || raw.paid),
+        note: raw.note || '',
+        image: raw.image || null,
+        createdAt: raw.createdAt || new Date().toISOString(),
+        updatedAt: raw.updatedAt || new Date().toISOString()
       };
-
-      await dbPut('orders', order);
-      showToast(window.saveMode === 'continue' ? '已儲存！請繼續填寫下一款規格' : '成功新增喊單紀錄！');
-      updateHeaderStats();
-
-      if (window.saveMode === 'continue') {
-        // Keep Image, Name, Price, MainCategory, SubCategory, Channel, Date
-        document.getElementById('add-spec').value = '';
-        document.getElementById('add-notes').value = '';
-        document.getElementById('add-qty').value = 1;
-      } else {
-        // Reset full form
-        document.getElementById('form-add-order').reset();
-        removeImage();
-        setDefaultDate();
-        renderChannelPills();
-        updateSubCategoryDropdown('add');
-        document.getElementById('duplicate-warning').classList.add('hidden');
-      }
     }
 
-    function setDefaultDate() {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('add-date').value = today;
-    }
+    async function exportBackupJSON() {
+      const orders = await getAllOrdersDB();
+      const settlements = await getAllSettlementsDB();
+      const channels = getStoredChannels();
 
-    /* ==========================================================================
-       10. ORDERS SEARCH & EDIT MODAL LOGIC
-       ========================================================================== */
-    let currentTimeFilterMonths = 3;
-
-    function setTimeFilter(months) {
-      currentTimeFilterMonths = months;
-      const pills = document.querySelectorAll('#search-time-pills .time-pill');
-      pills.forEach(p => {
-        p.className = 'time-pill bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full border border-slate-200 font-medium';
-      });
-      event.target.className = 'time-pill bg-brand-500 text-white text-xs px-2.5 py-1 rounded-full border border-brand-500 font-medium';
-      renderOrdersList();
-    }
-
-    async function renderOrdersList() {
-      const keyword = document.getElementById('search-keyword').value.trim();
-      const channelFilter = document.getElementById('filter-channel').value;
-      const mainCatFilter = document.getElementById('filter-main-cat').value;
-
-      const rawOrders = await dbGetAll('orders');
-      const orders = rawOrders.map(normalizeOrder);
-
-      const now = new Date();
-      const cutoffDate = new Date();
-      cutoffDate.setMonth(now.getMonth() - currentTimeFilterMonths);
-
-      const filtered = orders.filter(ord => {
-        // Time filter
-        if (currentTimeFilterMonths < 999 && new Date(ord.date) < cutoffDate) return false;
-        // Channel filter
-        if (channelFilter !== 'ALL' && ord.channel !== channelFilter) return false;
-        // Category filter
-        if (mainCatFilter !== 'ALL' && ord.mainCategory !== mainCatFilter) return false;
-        // Keyword fuzzy filter
-        if (keyword) {
-          const combinedText = `${ord.name} ${ord.spec} ${ord.notes}`.toLowerCase();
-          if (!checkFuzzyMatch(keyword, combinedText)) return false;
-        }
-        return true;
-      });
-
-      // Sort descending by date
-      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      document.getElementById('orders-count').innerText = filtered.length;
-
-      let totalSum = 0;
-      filtered.forEach(o => {
-        if (!o.isOutOfStock) totalSum += (o.price * o.qty);
-      });
-      document.getElementById('orders-total-sum').innerText = `NT$ ${totalSum.toLocaleString()}`;
-
-      const container = document.getElementById('orders-list-container');
-      if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-10 bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs">
-            <span>🔍 尚無符合條件的喊單紀錄</span>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = filtered.map(ord => {
-        const itemTotal = ord.isOutOfStock ? 0 : (ord.price * ord.qty);
-        return `
-          <div onclick="openEditModal('${ord.id}')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-200/80 flex items-center gap-3 cursor-pointer hover:border-slate-300 transition relative overflow-hidden">
-            ${ord.isOutOfStock ? `<div class="absolute top-0 right-0 bg-slate-400 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">斷貨 ($0)</div>` : ''}
-            
-            <div class="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-100 flex items-center justify-center text-slate-400 text-lg">
-              ${ord.image ? `<img src="${ord.image}" class="w-full h-full object-cover">` : '🛍️'}
-            </div>
-
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="px-2 py-0.5 rounded-md bg-brand-50 text-brand-700 text-[10px] font-bold border border-brand-100">${ord.channel}</span>
-                <span class="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-medium">${ord.mainCategory}-${ord.subCategory}</span>
-                <span class="text-[10px] text-slate-400">${ord.date}</span>
-              </div>
-              <h4 class="text-sm font-bold text-slate-800 truncate mt-1 ${ord.isOutOfStock ? 'line-through text-slate-400' : ''}">${ord.name}</h4>
-              <p class="text-xs text-slate-500 truncate">${ord.spec ? ord.spec + ' · ' : ''}數量: ${ord.qty}</p>
-            </div>
-
-            <div class="text-right shrink-0">
-              <div class="text-xs font-bold text-slate-800 ${ord.isOutOfStock ? 'line-through text-slate-400' : ''}">NT$ ${itemTotal.toLocaleString()}</div>
-              <div class="mt-1">
-                ${ord.isPaid 
-                  ? `<span class="inline-block bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-emerald-200">已付款</span>`
-                  : `<span class="inline-block bg-amber-50 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-amber-200">未付款</span>`
-                }
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    async function openEditModal(orderId) {
-      const raw = await dbGetAll('orders');
-      const order = raw.map(normalizeOrder).find(o => o.id === orderId);
-      if (!order) return;
-
-      document.getElementById('edit-id').value = order.id;
-      document.getElementById('edit-name').value = order.name;
-      document.getElementById('edit-spec').value = order.spec;
-      document.getElementById('edit-qty').value = order.qty;
-      document.getElementById('edit-price').value = order.price;
-      document.getElementById('edit-channel').value = order.channel;
-      document.getElementById('edit-main-cat').value = order.mainCategory;
-      updateSubCategoryDropdown('edit');
-      document.getElementById('edit-sub-cat').value = order.subCategory;
-      document.getElementById('edit-date').value = order.date;
-      document.getElementById('edit-notes').value = order.notes;
-      document.getElementById('edit-out-of-stock').checked = order.isOutOfStock;
-      document.getElementById('edit-is-paid').value = order.isPaid ? "true" : "false";
-
-      const modal = document.getElementById('modal-edit');
-      modal.classList.remove('opacity-0', 'pointer-events-none');
-    }
-
-    function closeEditModal() {
-      const modal = document.getElementById('modal-edit');
-      modal.classList.add('opacity-0', 'pointer-events-none');
-    }
-
-    async function handleEditFormSubmit(e) {
-      e.preventDefault();
-      const id = document.getElementById('edit-id').value;
-      const raw = await dbGetAll('orders');
-      const existing = raw.find(o => o.id === id);
-      if (!existing) return;
-
-      const updated = {
-        ...existing,
-        name: cleanProductName(document.getElementById('edit-name').value.trim()),
-        spec: document.getElementById('edit-spec').value.trim(),
-        qty: parseInt(document.getElementById('edit-qty').value) || 1,
-        price: parseFloat(document.getElementById('edit-price').value) || 0,
-        channel: document.getElementById('edit-channel').value,
-        mainCategory: document.getElementById('edit-main-cat').value,
-        subCategory: document.getElementById('edit-sub-cat').value,
-        date: document.getElementById('edit-date').value,
-        notes: document.getElementById('edit-notes').value.trim(),
-        isOutOfStock: document.getElementById('edit-out-of-stock').checked,
-        isPaid: document.getElementById('edit-is-paid').value === "true"
-      };
-
-      await dbPut('orders', updated);
-      closeEditModal();
-      showToast('訂單資料已更新！');
-      renderOrdersList();
-      renderSettlementTab();
-      updateHeaderStats();
-    }
-
-    async function deleteCurrentEditOrder() {
-      const id = document.getElementById('edit-id').value;
-      if (confirm('確定要刪除這筆喊單紀錄嗎？')) {
-        await dbDelete('orders', id);
-        closeEditModal();
-        showToast('已刪除喊單紀錄');
-        renderOrdersList();
-        renderSettlementTab();
-        updateHeaderStats();
-      }
-    }
-
-    /* ==========================================================================
-       11. MONTHLY SETTLEMENT TAB & BATCH PAYMENTS
-       ========================================================================== */
-    function switchSettlementSubtab(sub) {
-      const btnUnpaid = document.getElementById('btn-subtab-unpaid');
-      const btnHistory = document.getElementById('btn-subtab-history');
-      const secUnpaid = document.getElementById('settlement-unpaid-section');
-      const secHistory = document.getElementById('settlement-history-section');
-
-      if (sub === 'unpaid') {
-        btnUnpaid.className = 'flex-1 py-1.5 rounded-lg text-center transition bg-white text-slate-800 shadow-sm';
-        btnHistory.className = 'flex-1 py-1.5 rounded-lg text-center transition text-slate-600 hover:text-slate-800';
-        secUnpaid.classList.remove('hidden');
-        secHistory.classList.add('hidden');
-      } else {
-        btnHistory.className = 'flex-1 py-1.5 rounded-lg text-center transition bg-white text-slate-800 shadow-sm';
-        btnUnpaid.className = 'flex-1 py-1.5 rounded-lg text-center transition text-slate-600 hover:text-slate-800';
-        secHistory.classList.remove('hidden');
-        secUnpaid.classList.add('hidden');
-      }
-    }
-
-    async function renderSettlementTab() {
-      const rawOrders = await dbGetAll('orders');
-      const orders = rawOrders.map(normalizeOrder);
-
-      // Unpaid groups (excluding '網購平台')
-      const unpaidOrders = orders.filter(o => !o.isPaid && o.channel !== '網購平台');
-
-      // Group by YYYY-MM + Channel
-      const groups = {};
-      unpaidOrders.forEach(o => {
-        const monthKey = o.date ? o.date.substr(0, 7) : '其他';
-        const key = `${monthKey}__${o.channel}`;
-        if (!groups[key]) {
-          groups[key] = {
-            month: monthKey,
-            channel: o.channel,
-            items: []
-          };
-        }
-        groups[key].items.push(o);
-      });
-
-      const unpaidContainer = document.getElementById('unpaid-groups-container');
-      const groupKeys = Object.keys(groups);
-
-      if (groupKeys.length === 0) {
-        unpaidContainer.innerHTML = `
-          <div class="text-center py-12 bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs">
-            <span>🎉 太棒了！目前沒有待對帳付清的團購喊單</span>
-          </div>
-        `;
-      } else {
-        unpaidContainer.innerHTML = groupKeys.map(key => {
-          const group = groups[key];
-          let subtotal = 0;
-          group.items.forEach(item => {
-            if (!item.isOutOfStock) subtotal += (item.price * item.qty);
-          });
-
-          return `
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
-              <div class="flex items-center justify-between border-b pb-2.5 border-slate-100">
-                <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-1 rounded-xl bg-brand-500 text-white text-xs font-bold shadow-sm">${group.channel}</span>
-                  <span class="text-xs font-bold text-slate-600">${group.month} 月結</span>
-                </div>
-                <div class="text-right">
-                  <span class="text-xs text-slate-400">小計: </span>
-                  <span class="text-sm font-bold text-slate-800">NT$ ${subtotal.toLocaleString()}</span>
-                </div>
-              </div>
-
-              <!-- Item List -->
-              <div class="space-y-2">
-                ${group.items.map(item => `
-                  <div class="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50 border border-slate-100">
-                    <div class="flex items-center gap-2 min-w-0">
-                      ${item.image ? `<img src="${item.image}" class="w-8 h-8 rounded object-cover shrink-0">` : `<div class="w-8 h-8 rounded bg-slate-200 flex items-center justify-center text-slate-400 font-bold shrink-0">🛍️</div>`}
-                      <div class="min-w-0">
-                        <div class="font-bold text-slate-800 truncate ${item.isOutOfStock ? 'line-through text-slate-400' : ''}">${item.name}</div>
-                        <div class="text-[10px] text-slate-400 truncate">${item.spec ? item.spec + ' · ' : ''}$${item.price} × ${item.qty}</div>
-                      </div>
-                    </div>
-                    
-                    <div class="flex items-center gap-3 shrink-0 ml-2">
-                      <div class="font-bold text-slate-800 ${item.isOutOfStock ? 'line-through text-slate-400' : ''}">NT$ ${(item.isOutOfStock ? 0 : item.price * item.qty).toLocaleString()}</div>
-                      
-                      <!-- Inline Out of Stock Toggle -->
-                      <label class="flex items-center gap-1 cursor-pointer select-none text-[10px] ${item.isOutOfStock ? 'text-rose-600 font-bold' : 'text-slate-400'}">
-                        <input type="checkbox" ${item.isOutOfStock ? 'checked' : ''} onchange="toggleItemOutOfStock('${item.id}', this.checked)" class="rounded border-slate-300 text-rose-500 focus:ring-rose-400">
-                        <span>斷貨</span>
-                      </label>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-
-              <button type="button" onclick="openSettlementModal('${group.month}', '${group.channel}')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow flex items-center justify-center gap-1">
-                <span>💳</span> 整批對帳付清 (${group.items.length} 件商品)
-              </button>
-            </div>
-          `;
-        }).join('');
-      }
-
-      // Render History Records
-      const settlements = await dbGetAll('settlements');
-      settlements.sort((a, b) => new Date(b.paidDate) - new Date(a.paidDate));
-
-      const historyContainer = document.getElementById('history-records-container');
-      if (settlements.length === 0) {
-        historyContainer.innerHTML = `
-          <div class="text-center py-10 bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs">
-            <span>📜 尚無已對帳結帳歷史紀錄</span>
-          </div>
-        `;
-      } else {
-        historyContainer.innerHTML = settlements.map(s => `
-          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-2 text-xs">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 text-[10px] font-bold">${s.channel}</span>
-                <span class="font-bold text-slate-700">${s.month} 結算</span>
-              </div>
-              <span class="text-[10px] text-slate-400">付款日: ${s.paidDate}</span>
-            </div>
-            
-            <div class="flex items-center justify-between bg-slate-50 p-2 rounded-xl text-slate-600">
-              <span>小計: NT$ ${s.subtotal} ${s.shipping > 0 ? '+ 運費$' + s.shipping : ''} ${s.discount > 0 ? '- 折扣$' + s.discount : ''}</span>
-              <span class="font-bold text-brand-600 text-sm">實付: NT$ ${s.finalTotal}</span>
-            </div>
-
-            ${s.notes ? `<div class="text-[11px] text-slate-500">備註: ${s.notes}</div>` : ''}
-
-            <div class="pt-1 flex justify-end">
-              <button type="button" onclick="revertSettlement('${s.id}')" class="text-[11px] text-rose-600 hover:underline font-semibold flex items-center gap-1">
-                <span>↩️</span> 退回未付款
-              </button>
-            </div>
-          </div>
-        `).join('');
-      }
-    }
-
-    async function toggleItemOutOfStock(orderId, isOutOfStock) {
-      const raw = await dbGetAll('orders');
-      const order = raw.find(o => o.id === orderId);
-      if (order) {
-        order.isOutOfStock = isOutOfStock;
-        await dbPut('orders', order);
-        renderSettlementTab();
-        updateHeaderStats();
-      }
-    }
-
-    async function openSettlementModal(month, channel) {
-      activeSettlementTarget = { month, channel };
-      const rawOrders = await dbGetAll('orders');
-      const orders = rawOrders.map(normalizeOrder);
-
-      const targetItems = orders.filter(o => !o.isPaid && (o.date ? o.date.substr(0, 7) : '其他') === month && o.channel === channel);
-
-      let subtotal = 0;
-      targetItems.forEach(i => {
-        if (!i.isOutOfStock) subtotal += (i.price * i.qty);
-      });
-
-      document.getElementById('settle-modal-subtitle').innerText = `${month} · ${channel}`;
-      document.getElementById('settle-items-count').innerText = `${targetItems.length} 件`;
-      document.getElementById('settle-subtotal').innerText = `NT$ ${subtotal.toLocaleString()}`;
-      document.getElementById('settle-subtotal').dataset.val = subtotal;
-
-      document.getElementById('settle-shipping').value = 0;
-      document.getElementById('settle-discount').value = 0;
-      document.getElementById('settle-paid-date').value = new Date().toISOString().split('T')[0];
-      document.getElementById('settle-notes').value = '';
-
-      calculateSettlementTotal();
-
-      const modal = document.getElementById('modal-settlement');
-      modal.classList.remove('opacity-0', 'pointer-events-none');
-    }
-
-    function calculateSettlementTotal() {
-      const subtotal = parseFloat(document.getElementById('settle-subtotal').dataset.val) || 0;
-      const shipping = parseFloat(document.getElementById('settle-shipping').value) || 0;
-      const discount = parseFloat(document.getElementById('settle-discount').value) || 0;
-
-      const finalTotal = Math.max(0, subtotal + shipping - discount);
-      document.getElementById('settle-final-total').innerText = `NT$ ${finalTotal.toLocaleString()}`;
-    }
-
-    function closeSettlementModal() {
-      const modal = document.getElementById('modal-settlement');
-      modal.classList.add('opacity-0', 'pointer-events-none');
-    }
-
-    async function confirmBatchSettlement() {
-      if (!activeSettlementTarget) return;
-
-      const { month, channel } = activeSettlementTarget;
-      const rawOrders = await dbGetAll('orders');
-      const orders = rawOrders.map(normalizeOrder);
-
-      const targetItems = orders.filter(o => !o.isPaid && (o.date ? o.date.substr(0, 7) : '其他') === month && o.channel === channel);
-
-      const subtotal = parseFloat(document.getElementById('settle-subtotal').dataset.val) || 0;
-      const shipping = parseFloat(document.getElementById('settle-shipping').value) || 0;
-      const discount = parseFloat(document.getElementById('settle-discount').value) || 0;
-      const finalTotal = Math.max(0, subtotal + shipping - discount);
-      const paidDate = document.getElementById('settle-paid-date').value;
-      const notes = document.getElementById('settle-notes').value.trim();
-
-      const settlementRecord = {
-        id: 'settle_' + Date.now(),
-        month,
-        channel,
-        orderIds: targetItems.map(i => i.id),
-        subtotal,
-        shipping,
-        discount,
-        finalTotal,
-        paidDate,
-        notes,
-        createdAt: new Date().toISOString()
-      };
-
-      await dbPut('settlements', settlementRecord);
-
-      // Mark all orders as paid
-      for (const item of targetItems) {
-        item.isPaid = true;
-        item.paidDate = paidDate;
-        await dbPut('orders', item);
-      }
-
-      closeSettlementModal();
-      showToast('🎉 對帳完成！已標記付清');
-      renderSettlementTab();
-      updateHeaderStats();
-    }
-
-    async function revertSettlement(settlementId) {
-      if (confirm('確定要將這批對帳紀錄退回為「未付款」狀態嗎？')) {
-        const rawSettlements = await dbGetAll('settlements');
-        const settlement = rawSettlements.find(s => s.id === settlementId);
-        if (!settlement) return;
-
-        const rawOrders = await dbGetAll('orders');
-        for (const orderId of settlement.orderIds) {
-          const ord = rawOrders.find(o => o.id === orderId);
-          if (ord) {
-            ord.isPaid = false;
-            ord.paidDate = null;
-            await dbPut('orders', ord);
-          }
-        }
-
-        await dbDelete('settlements', settlementId);
-        showToast('已退回未付款狀態');
-        renderSettlementTab();
-        updateHeaderStats();
-      }
-    }
-
-    /* ==========================================================================
-       12. BACKUP & RESTORE (JSON EXPORT/IMPORT & NORMALIZATION)
-       ========================================================================== */
-    async function exportDataJson() {
-      const rawOrders = await dbGetAll('orders');
-      const orders = rawOrders.map(normalizeOrder);
-      const settlements = await dbGetAll('settlements');
-      const channels = loadChannels();
-
-      const backupObj = {
-        version: 1,
-        exportedAt: new Date().toISOString(),
+      const backupData = {
+        version: 2,
+        exportDate: new Date().toISOString(),
         channels,
         orders,
         settlements
       };
 
-      const jsonStr = JSON.stringify(backupObj, null, 2);
+      const jsonStr = JSON.stringify(backupData, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
+      
       const a = document.createElement('a');
       a.href = url;
-      a.download = `did-i-buy-this_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `did-i-buy-this-backup-${new Date().toISOString().substring(0,10)}.json`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast('已完成匯出 JSON 備份檔！');
+
+      showToast('JSON 備份檔案已成功匯出');
     }
 
-    function importDataJson(e) {
-      const file = e.target.files[0];
+    function importBackupJSON(event) {
+      const file = event.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = async (event) => {
+      reader.onload = async function(e) {
         try {
-          const parsed = JSON.parse(event.target.result);
-          await processImportedObject(parsed);
+          const data = JSON.parse(e.target.result);
+          await processImportedData(data);
+          event.target.value = ''; // Reset input so same file can be chosen again
         } catch (err) {
-          console.error(err);
-          showToast('JSON 檔案格式錯誤，無法解析！');
-        } finally {
-          e.target.value = ''; // Reset file input
+          showToast('讀取備份檔案失敗：JSON 格式錯誤', 'error');
         }
       };
       reader.readAsText(file);
     }
 
-    async function importFromTextFallback() {
-      const text = document.getElementById('import-text-fallback').value.trim();
+    function importBackupFromText() {
+      const text = document.getElementById('setting-backup-text').value.trim();
       if (!text) {
-        showToast('請先貼上備份文字！');
+        showToast('請貼上 JSON 備份內容', 'error');
         return;
       }
       try {
-        const parsed = JSON.parse(text);
-        await processImportedObject(parsed);
-        document.getElementById('import-text-fallback').value = '';
-      } catch (e) {
-        showToast('解析失敗！請確認貼上的文字為正確 JSON 格式');
+        const data = JSON.parse(text);
+        processImportedData(data);
+      } catch (err) {
+        showToast('JSON 格式錯誤，請檢查文字內容', 'error');
       }
     }
 
-    async function processImportedObject(obj) {
-      let ordersToImport = [];
-      let settlementsToImport = [];
+    async function processImportedData(data) {
+      if (!data) return;
 
-      if (Array.isArray(obj)) {
-        ordersToImport = obj;
-      } else if (obj && typeof obj === 'object') {
-        if (Array.isArray(obj.orders)) ordersToImport = obj.orders;
-        if (Array.isArray(obj.settlements)) settlementsToImport = obj.settlements;
-        if (Array.isArray(obj.channels)) saveChannels(obj.channels);
+      let rawOrders = [];
+      let rawSettlements = [];
+
+      if (Array.isArray(data)) {
+        rawOrders = data;
+      } else {
+        if (data.channels && Array.isArray(data.channels)) {
+          saveStoredChannels(data.channels);
+        }
+        if (data.orders && Array.isArray(data.orders)) rawOrders = data.orders;
+        if (data.settlements && Array.isArray(data.settlements)) rawSettlements = data.settlements;
       }
 
-      let count = 0;
-      for (const item of ordersToImport) {
+      let importedCount = 0;
+      for (const item of rawOrders) {
         const normalized = normalizeOrder(item);
-        if (normalized && normalized.id) {
-          await dbPut('orders', normalized);
-          count++;
-        }
+        await saveOrderDB(normalized);
+        importedCount++;
       }
 
-      for (const st of settlementsToImport) {
-        if (st && st.id) {
-          await dbPut('settlements', st);
-        }
+      for (const set of rawSettlements) {
+        await saveSettlementDB(set);
       }
 
-      showToast(`成功匯入 ${count} 筆喊單紀錄！`);
+      showToast(`成功還原 ${importedCount} 筆訂單資料！`);
+      
+      updateHeaderStats();
       renderOrdersList();
-      renderSettlementTab();
-      updateHeaderStats();
+      renderSettlementView();
     }
 
-    async function clearAllDataWithConfirm() {
-      if (confirm('⚠️ 警告：確定要清除所有喊單與對帳歷史資料嗎？此操作不可復原！')) {
-        if (confirm('請再次確認：您真的要刪除全部資料嗎？')) {
-          const tx1 = db.transaction('orders', 'readwrite');
-          tx1.objectStore('orders').clear();
-          const tx2 = db.transaction('settlements', 'readwrite');
-          tx2.objectStore('settlements').clear();
+    async function copyBackupToClipboard() {
+      const orders = await getAllOrdersDB();
+      const settlements = await getAllSettlementsDB();
+      const channels = getStoredChannels();
 
-          showToast('已清空所有資料');
-          renderOrdersList();
-          renderSettlementTab();
-          updateHeaderStats();
-        }
+      const backupData = {
+        version: 2,
+        exportDate: new Date().toISOString(),
+        channels,
+        orders,
+        settlements
+      };
+
+      const jsonStr = JSON.stringify(backupData);
+      document.getElementById('setting-backup-text').value = jsonStr;
+
+      try {
+        const el = document.getElementById('setting-backup-text');
+        el.select();
+        document.execCommand('copy');
+        showToast('已將備份文字複製至剪貼簿！');
+      } catch (e) {
+        showToast('複製失敗，請手動複製文字框內容', 'warning');
       }
     }
 
-    /* ==========================================================================
-       13. GLOBAL UI, TABS & STATS
-       ========================================================================== */
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+    async function clearAllData() {
+      if (!confirm('⚠️ 警告：確定要刪除所有訂單與對帳紀錄嗎？此動作無法復原！')) return;
+      if (!confirm('⚠️ 請再次確認：是否真的要清除所有資料？')) return;
 
-      const navBtns = document.querySelectorAll('.nav-btn');
-      navBtns.forEach(btn => btn.className = 'nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-600');
-      document.getElementById(`nav-${tabId}`).className = 'nav-btn flex flex-col items-center justify-center gap-0.5 text-brand-600';
+      const orders = await getAllOrdersDB();
+      for (const o of orders) await deleteOrderDB(o.id);
 
-      if (tabId === 'search') renderOrdersList();
-      if (tabId === 'settlement') renderSettlementTab();
-      if (tabId === 'settings') renderSettingsChannels();
-    }
+      const settlements = await getAllSettlementsDB();
+      for (const s of settlements) await deleteSettlementDB(s.id);
 
-    async function updateHeaderStats() {
-      const raw = await dbGetAll('orders');
-      const orders = raw.map(normalizeOrder);
-      const unpaid = orders.filter(o => !o.isPaid && !o.isOutOfStock);
-      document.getElementById('header-stat').innerText = `待月結 ${unpaid.length} 筆`;
-    }
-
-    function saveApiKey() {
-      const key = document.getElementById('input-api-key').value.trim();
-      localStorage.setItem('dib_gemini_key', key);
-      showToast('API Key 已儲存！');
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      document.getElementById('toast-msg').innerText = msg;
-      toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
-      toast.classList.add('opacity-100', 'translate-y-0');
-      setTimeout(() => {
-        toast.classList.remove('opacity-100', 'translate-y-0');
-        toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
-      }, 2600);
-    }
-
-    /* ==========================================================================
-       14. APPLICATION INITIALIZATION
-       ========================================================================== */
-    window.onload = async () => {
-      await initDB();
-      loadChannels();
-      renderChannelPills();
-      updateSubCategoryDropdown('add');
-      setDefaultDate();
-      populateChannelDropdowns();
+      showToast('所有資料已成功清除');
+      
       updateHeaderStats();
+      renderOrdersList();
+      renderSettlementView();
+    }
 
-      // Load API key into input
-      const savedKey = localStorage.getItem('dib_gemini_key');
-      if (savedKey) document.getElementById('input-api-key').value = savedKey;
-    };
+    // -----------------------------------------------------------------
+    // HEADER METRICS UPDATER
+    // -----------------------------------------------------------------
+    async function updateHeaderStats() {
+      const orders = await getAllOrdersDB();
+      const unpaidCount = orders.filter(o => !o.isPaid && !o.isOutOfStock && o.channel !== PLATFORM_CHANNEL).length;
+      
+      const statsEl = document.getElementById('quick-stats');
+      statsEl.innerHTML = `
+        <div>總喊單: <span class="font-bold text-slate-700">${orders.length}</span> 筆</div>
+        <div>待對帳: <span class="font-bold text-rose-600">${unpaidCount}</span> 筆</div>
+      `;
+    }
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+        self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+        self.addEventListener('fetch', e => {
+          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+        });
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    }
   </script>
 </body>
 </html>
