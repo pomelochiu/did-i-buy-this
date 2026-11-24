@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <!-- Viewport for Mobile-first PWA & iOS Safari safe areas -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="團購助手">
@@ -33,6 +33,8 @@
   </script>
 
   <style>
+    .hidden { display: none !important; }
+    #toast { z-index: 60; pointer-events: none; }
     /* iOS Safari Input Date and General Fixes */
     input[type="date"] {
       -webkit-appearance: none;
@@ -72,7 +74,7 @@
   <!-- Toast Notification Container -->
   <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 transform -translate-y-10 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900/90 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-xl flex items-center gap-2">
     <span id="toast-icon">✨</span>
-    <span id="toast-msg">提示訊息</span>
+    <span id="toast-msg" role="status" aria-live="polite">提示訊息</span>
   </div>
 
   <!-- Header Section -->
@@ -185,7 +187,7 @@
           </div>
           <div>
             <label class="text-xs font-bold text-slate-600 block mb-1">單價 ($)</label>
-            <input type="number" id="add-price-input" placeholder="0" min="0"
+            <input type="number" id="add-price-input" placeholder="0" min="0" step="0.01"
                    class="w-full text-sm border border-slate-200 rounded-xl px-2.5 py-2 outline-none focus:border-coral-400">
           </div>
           <div>
@@ -199,13 +201,13 @@
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-xs font-bold text-slate-600 block mb-1">大分類</label>
-            <select id="add-main-cat" onchange="onMainCatChange('add', this.value)" class="w-full text-sm border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white">
+            <select id="add-main-cat" onchange="addFormState.isUserCategoryTouched = true; onMainCatChange('add', this.value)" class="w-full text-sm border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white">
               <!-- Rendered dynamically -->
             </select>
           </div>
           <div>
             <label class="text-xs font-bold text-slate-600 block mb-1">子分類</label>
-            <select id="add-sub-cat" class="w-full text-sm border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white">
+            <select id="add-sub-cat" onchange="addFormState.isUserCategoryTouched = true" class="w-full text-sm border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white">
               <!-- Rendered dynamically -->
             </select>
           </div>
@@ -240,7 +242,7 @@
         <!-- Keyword Search Bar -->
         <input type="text" id="search-keyword" placeholder="搜尋品項名稱、規格、購買渠道..." 
                class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400 bg-slate-50/50"
-               oninput="renderSearchTab()">
+               oninput="scheduleSearch()">
 
         <!-- Filter Dropdowns Grid -->
         <div class="grid grid-cols-2 gap-2">
@@ -255,8 +257,8 @@
         <!-- Date Filter Buttons & Custom Date Range -->
         <div class="space-y-1.5">
           <div class="flex flex-wrap gap-1">
-            <button onclick="setSearchDateFilter('1M')" id="sdate-1M" class="text-xs px-2.5 py-1 rounded-lg border bg-rose-500 text-white font-medium">近1個月</button>
-            <button onclick="setSearchDateFilter('3M')" id="sdate-3M" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50">近3個月</button>
+            <button onclick="setSearchDateFilter('1M')" id="sdate-1M" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50">近1個月</button>
+            <button onclick="setSearchDateFilter('3M')" id="sdate-3M" class="text-xs px-2.5 py-1 rounded-lg border bg-rose-500 text-white font-medium">近3個月</button>
             <button onclick="setSearchDateFilter('6M')" id="sdate-6M" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50">近6個月</button>
             <button onclick="setSearchDateFilter('ALL')" id="sdate-ALL" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50">全部</button>
             <button onclick="setSearchDateFilter('CUSTOM')" id="sdate-CUSTOM" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50">自訂</button>
@@ -320,12 +322,13 @@
         <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
           <span>🤖</span> Gemini AI Key 設定
         </h2>
-        <p class="text-xs text-slate-500">設定 key 後，上傳商品圖片可一鍵自動識別品項、規格與價格。</p>
+        <p class="text-xs text-slate-500">點選辨識時，商品圖片會傳送至 Gemini。</p>
         <div class="flex gap-2">
-          <input type="password" id="gemini-key-input" placeholder="貼上 AI Studio API Key" class="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400">
+          <input type="password" id="gemini-key-input" autocomplete="off" placeholder="貼上 AI Studio API Key" class="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400">
           <button onclick="saveGeminiKey()" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl hover:bg-slate-700">儲存</button>
           <button onclick="clearGeminiKey()" class="px-3 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200">清除</button>
         </div>
+        <label class="flex items-center gap-2 text-xs text-slate-600"><input id="gemini-remember-key" type="checkbox"> 在此瀏覽器記住金鑰</label>
         <div id="gemini-status" class="text-xs text-slate-500">狀態：未設定 API Key</div>
       </div>
 
@@ -386,10 +389,10 @@
   </main>
 
   <!-- EDIT ORDER MODAL OVERLAY -->
-  <div id="edit-modal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" class="hidden fixed inset-0 z-50 modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-5 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="text-base font-bold text-slate-800">✏️ 編輯團購訂單</h3>
+        <h3 id="edit-modal-title" class="text-base font-bold text-slate-800">✏️ 編輯團購訂單</h3>
         <button onclick="closeEditModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center hover:bg-slate-200">✕</button>
       </div>
 
@@ -432,7 +435,7 @@
           </div>
           <div>
             <label class="text-xs font-bold text-slate-600 block mb-1">單價</label>
-            <input type="number" id="edit-price-input" min="0" class="w-full text-sm border border-slate-200 rounded-xl px-2.5 py-2 outline-none">
+            <input type="number" id="edit-price-input" min="0" step="0.01" class="w-full text-sm border border-slate-200 rounded-xl px-2.5 py-2 outline-none">
           </div>
           <div>
             <label class="text-xs font-bold text-slate-600 block mb-1">數量</label>
@@ -534,18 +537,465 @@
 
   <!-- JAVASCRIPT APPLICATION CORE -->
   <script>
+    const OrderRules = (() => {
+      const CATEGORIES = {
+        '女兒': ['上衣', '褲子', '裙子', '洋裝', '外套', '鞋子', '髮飾配件', '內著襪子', '玩具文具', '書籍', '零食點心', '其他'],
+        '兒子': ['上衣', '褲子', '外套', '鞋子', '配件帽襪', '玩具車車', '書籍', '零食點心', '其他'],
+        '自用': ['上衣', '褲子', '裙子', '洋裝', '外套', '鞋包配件', '美妝保養', '美食零食', '生活小物', '其他'],
+        '家用': ['食品生鮮', '日用清潔', '廚房餐具', '收納居家', '常備藥品', '其他']
+      };
+      const keyToken = key => JSON.stringify(key);
+
+      function today(date = new Date()) {
+        const pad = number => String(number).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+      }
+
+      function monthsAgo(months, now = new Date()) {
+        const end = new Date(now.getFullYear(), now.getMonth() - months + 1, 0).getDate();
+        return today(new Date(now.getFullYear(), now.getMonth() - months, Math.min(end, now.getDate())));
+      }
+
+      function isDay(value) {
+        if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+        const date = new Date(value + 'T00:00:00Z');
+        return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+      }
+
+      function normalizeDay(value) {
+        if (isDay(value) || typeof value !== 'string') return value;
+        const match = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?:$|T)/.exec(value);
+        if (!match) return value;
+        const date = match.slice(1).map(part => part.padStart(2, '0')).join('-');
+        return isDay(date) ? date : value;
+      }
+
+      function orderId(prefix) {
+        return prefix + '_' + (globalThis.crypto?.randomUUID?.() ||
+          Date.now() + '_' + Math.random().toString(36).slice(2));
+      }
+
+      function safeImage(value) {
+        if (typeof value !== 'string' || !value) return '';
+        if (/^data:image\/(?:png|jpe?g|gif|webp|bmp|avif|heic|heif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value)) {
+          return value;
+        }
+        if (/^https?:\/\//i.test(value)) {
+          try {
+            const url = new URL(value);
+            return !url.username && !url.password ? url.href : '';
+          } catch {
+            return '';
+          }
+        }
+        // Older backups may store image bytes without the data URL prefix.
+        const mime = value.startsWith('/9j/') ? 'jpeg'
+          : value.startsWith('iVBOR') ? 'png'
+          : value.startsWith('R0lGOD') ? 'gif'
+          : value.startsWith('UklGR') ? 'webp' : '';
+        return mime && /^[A-Za-z0-9+/]+={0,2}$/.test(value) ? `data:image/${mime};base64,${value}` : '';
+      }
+
+      function readFlag(value, strict) {
+        if (value === true || value === 1 || value === '1' || value === 'true') return true;
+        if ([undefined, null, false, 0, '0', 'false', ''].includes(value)) return false;
+        if (strict) throw new Error('付款或斷貨狀態格式錯誤');
+        return false;
+      }
+
+      function readNumber(value, fallback) {
+        if (value === undefined || value === null || value === '') return fallback;
+        if (typeof value === 'number' || (typeof value === 'string' && value.trim())) return Number(value);
+        return NaN;
+      }
+
+      function normalizeOrder(raw, strict = false) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('訂單必須為物件');
+        const text = (value, fallback = '') => {
+          if (value === undefined || value === null || value === '') return fallback;
+          if (typeof value === 'string') return value;
+          if (strict) throw new Error('訂單文字欄位格式錯誤');
+          return String(value);
+        };
+        const oldCategory = text(raw.category);
+        const separator = oldCategory.indexOf('-');
+        const oldMain = separator === -1 ? oldCategory : oldCategory.slice(0, separator);
+        const oldSub = separator === -1 ? '' : oldCategory.slice(separator + 1);
+        const image = text(raw.image || raw.imageData || raw.photo || raw.img || raw.imageBase64 || raw.thumbnail);
+        const date = normalizeDay(text(raw.date, today()));
+        const mainCategory = text(raw.mainCategory || raw.majorCategory || oldMain, '自用');
+        const legacyDefaultSub = oldMain && !oldSub && Object.hasOwn(CATEGORIES, oldMain)
+          ? CATEGORIES[oldMain][0] : '其他';
+        const paid = readFlag(raw.isPaid ?? raw.paid, strict);
+
+        return {
+          id: raw.id ?? orderId('ord'),
+          channel: text(raw.channel, '網購平台'),
+          name: text(raw.name || raw.itemName || raw.title, '未命名商品'),
+          spec: text(raw.spec ?? raw.specification ?? raw.colorSize),
+          unitPrice: readNumber(raw.unitPrice ?? raw.price, 0),
+          qty: readNumber(raw.qty ?? raw.quantity, 1),
+          mainCategory,
+          subCategory: text(raw.subCategory || raw.minorCategory || oldSub, legacyDefaultSub),
+          date,
+          isPaid: paid,
+          isOutOfStock: readFlag(raw.isOutOfStock ?? raw.outOfStock, strict),
+          note: text(raw.note ?? raw.notes),
+          image: strict ? image : safeImage(image),
+          settlementDate: paid ? normalizeDay(raw.settlementDate) || null : null,
+          settlementId: paid ? raw.settlementId ?? null : null
+        };
+      }
+
+      function validKey(value) {
+        return typeof value === 'string' || Number.isFinite(value) ||
+          (Array.isArray(value) && value.every(validKey));
+      }
+
+      function cents(amount) {
+        if (!Number.isFinite(amount) || amount < 0) throw new Error('金額須為非負數字');
+        const value = Math.round(amount * 100);
+        if (!Number.isSafeInteger(value)) throw new Error('金額超出範圍');
+        return value;
+      }
+
+      function validateOrder(order) {
+        if (!validKey(order.id)) throw new Error('訂單 ID 格式錯誤');
+        if (typeof order.name !== 'string' || !order.name.trim()) throw new Error('請輸入品項名稱');
+        if (typeof order.channel !== 'string' || !order.channel.trim()) throw new Error('請輸入購買渠道');
+        if (!isDay(order.date)) throw new Error('喊單日期格式錯誤');
+        if (!Number.isSafeInteger(order.qty) || order.qty < 1) throw new Error('數量須為正整數');
+        if (!Number.isSafeInteger(cents(order.unitPrice) * order.qty)) throw new Error('訂單金額超出範圍');
+        if (order.image && !safeImage(order.image)) throw new Error('商品圖片格式或網址不受支援');
+        if (order.settlementDate && !isDay(order.settlementDate)) throw new Error('結算日期格式錯誤');
+        if (order.settlementId !== null && order.settlementId !== undefined && typeof order.settlementId !== 'string') {
+          throw new Error('結算 ID 格式錯誤');
+        }
+      }
+
+      function subtotal(orders) {
+        const amount = orders.reduce((total, order) =>
+          total + (order.isOutOfStock ? 0 : cents(order.unitPrice) * order.qty), 0);
+        if (!Number.isSafeInteger(amount) || amount < 0) throw new Error('商品小計超出範圍');
+        return amount / 100;
+      }
+
+      function settlementAmounts(subtotalAmount, shipping, discount) {
+        const gross = cents(subtotalAmount) + cents(shipping);
+        if (!Number.isSafeInteger(gross)) throw new Error('結算金額超出範圍');
+        return {
+          subtotal: cents(subtotalAmount) / 100,
+          shipping: cents(shipping) / 100,
+          discount: cents(discount) / 100,
+          total: Math.max(0, gross - cents(discount)) / 100
+        };
+      }
+
+      function normalizeSettlement(raw) {
+        if (!raw || typeof raw.id !== 'string' || !raw.id || !isDay(raw.date) ||
+            !isDay(raw.month + '-01') || typeof raw.channel !== 'string' || !raw.channel.trim() ||
+            !Array.isArray(raw.orderIds) || !raw.orderIds.length || !raw.orderIds.every(validKey) ||
+            !Array.isArray(raw.returnedOrderIds) || !raw.returnedOrderIds.every(validKey)) {
+          throw new Error('月結紀錄格式錯誤');
+        }
+        const orderKeys = new Set(raw.orderIds.map(keyToken));
+        if (orderKeys.size !== raw.orderIds.length ||
+            !raw.returnedOrderIds.every(key => orderKeys.has(keyToken(key)))) throw new Error('月結訂單清單不一致');
+        const amounts = settlementAmounts(raw.subtotal, raw.shipping, raw.discount);
+        if (amounts.total !== raw.total) throw new Error('月結總額與明細不一致');
+        return { id: raw.id, date: raw.date, month: raw.month, channel: raw.channel,
+          orderIds: raw.orderIds, returnedOrderIds: raw.returnedOrderIds, ...amounts };
+      }
+
+      function parseBackup(json) {
+        const parsed = JSON.parse(json);
+        const data = Array.isArray(parsed) ? { orders: parsed } : parsed;
+        if (!data || !Array.isArray(data.orders)) throw new Error('找不到訂單清單');
+        const channels = data.channels ?? [];
+        const settlements = data.settlements ?? [];
+        if (!Array.isArray(channels) || !channels.every(value => typeof value === 'string' && value.trim())) {
+          throw new Error('渠道清單格式錯誤');
+        }
+        if (!Array.isArray(settlements)) throw new Error('月結清單格式錯誤');
+
+        const seen = new Set();
+        const orders = data.orders.map((raw, index) => {
+          try {
+            const order = normalizeOrder(raw, true);
+            validateOrder(order);
+            order.image = safeImage(order.image);
+            order.name = order.name.trim();
+            order.channel = order.channel.trim();
+            const key = keyToken(order.id);
+            if (seen.has(key)) throw new Error('備份內有重複的訂單 ID');
+            seen.add(key);
+            return order;
+          } catch (err) {
+            throw new Error(`第 ${index + 1} 筆訂單：${err.message}`);
+          }
+        });
+        const batches = settlements.map(normalizeSettlement);
+        const byId = new Map(batches.map(batch => [batch.id, batch]));
+        if (byId.size !== batches.length) throw new Error('備份內有重複的月結 ID');
+        for (const order of orders) {
+          if (order.settlementId === null) continue;
+          const batch = byId.get(order.settlementId);
+          const key = keyToken(order.id);
+          if (!batch || !batch.orderIds.some(id => keyToken(id) === key) ||
+              batch.returnedOrderIds.some(id => keyToken(id) === key)) {
+            throw new Error('訂單與月結紀錄關聯不一致');
+          }
+        }
+        return { orders, settlements: batches, channels: [...new Set(channels.map(value => value.trim()))] };
+      }
+
+      return { CATEGORIES, today, monthsAgo, isDay, orderId, keyToken, safeImage, normalizeOrder,
+        validateOrder, parseBackup, subtotal, settlementAmounts };
+    })();
+  </script>
+  <script>
+    const OrderStorage = (() => {
+      const { normalizeOrder, orderId, keyToken, today, subtotal, settlementAmounts } = OrderRules;
+      let db;
+      const orderStores = ['orders', 'orderSummaries'];
+      const historyStores = [...orderStores, 'settlements'];
+
+      function initDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open('DIB_DB', 3);
+          request.onupgradeneeded = () => {
+            const database = request.result;
+            const tx = request.transaction;
+            if (!database.objectStoreNames.contains('orders')) {
+              const orders = database.createObjectStore('orders', { keyPath: 'id' });
+              orders.createIndex('date', 'date');
+              orders.createIndex('channel', 'channel');
+            }
+            const summaries = database.createObjectStore('orderSummaries', { keyPath: 'id' });
+            summaries.createIndex('date', 'date');
+            database.createObjectStore('settlements', { keyPath: 'id' });
+            database.createObjectStore('settings');
+            const cursorRequest = tx.objectStore('orders').openCursor();
+            cursorRequest.onsuccess = () => {
+              const cursor = cursorRequest.result;
+              if (!cursor) return;
+              summaries.put(summarize(cursor.value));
+              cursor.continue();
+            };
+          };
+          request.onsuccess = () => {
+            db = request.result;
+            db.onversionchange = () => db.close();
+            resolve();
+          };
+          request.onblocked = () => reject(new Error('請關閉其他開著的團購助手頁面，再重新載入。'));
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      function read(request) {
+        return new Promise((resolve, reject) => {
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function write(names, work) {
+        const tx = db.transaction(names, 'readwrite');
+        const complete = new Promise((resolve, reject) => {
+          tx.oncomplete = resolve;
+          tx.onabort = () => reject(tx.error || new Error('資料庫交易已取消'));
+        });
+        const stores = names.map(name => tx.objectStore(name));
+        try {
+          const [result] = await Promise.all([work(...stores), complete]);
+          return result;
+        } catch (err) {
+          try { tx.abort(); } catch { /* The transaction has already ended. */ }
+          await complete.catch(() => {});
+          throw err;
+        }
+      }
+
+      function summarize(raw) {
+        const { image, ...order } = normalizeOrder(raw);
+        return { ...order, hasImage: Boolean(image) };
+      }
+
+      function putOrder(orders, summaries, order) {
+        orders.put(order);
+        summaries.put(summarize(order));
+      }
+
+      function getOrder(id) {
+        return read(db.transaction('orders').objectStore('orders').get(id));
+      }
+
+      function getSummaries(min, max) {
+        const store = db.transaction('orderSummaries').objectStore('orderSummaries');
+        if (min && max && min > max) return Promise.resolve([]);
+        if (!min && !max) return read(store.getAll());
+        const range = min && max ? IDBKeyRange.bound(min, max)
+          : min ? IDBKeyRange.lowerBound(min) : IDBKeyRange.upperBound(max);
+        return read(store.index('date').getAll(range));
+      }
+
+      function saveOrder(order) {
+        return write(orderStores, (orders, summaries) => putOrder(orders, summaries, order));
+      }
+
+      async function markReturned(settlements, order) {
+        if (order.settlementId == null) return;
+        const batch = await read(settlements.get(order.settlementId));
+        if (!batch) return;
+        const key = keyToken(order.id);
+        if (!batch.returnedOrderIds.some(id => keyToken(id) === key)) {
+          settlements.put({ ...batch, returnedOrderIds: [...batch.returnedOrderIds, order.id] });
+        }
+      }
+
+      function updateOrder(order) {
+        return write(historyStores, async (orders, summaries, settlements) => {
+          const current = await read(orders.get(order.id));
+          if (!current) throw new Error('找不到這筆訂單');
+          const previous = normalizeOrder(current);
+          if (previous.isPaid && !order.isPaid) await markReturned(settlements, previous);
+          putOrder(orders, summaries, {
+            ...order,
+            settlementId: order.isPaid ? previous.settlementId : null,
+            settlementDate: order.isPaid ? (previous.settlementDate || today()) : null
+          });
+        });
+      }
+
+      function returnToUnpaid(id) {
+        return write(historyStores, async (orders, summaries, settlements) => {
+          const order = await read(orders.get(id));
+          if (!order) throw new Error('找不到這筆訂單');
+          await markReturned(settlements, order);
+          putOrder(orders, summaries, { ...order, isPaid: false, settlementId: null, settlementDate: null });
+        });
+      }
+
+      function setStockStatus(id, isOutOfStock) {
+        return write(orderStores, async (orders, summaries) => {
+          const order = await read(orders.get(id));
+          if (!order) throw new Error('找不到這筆訂單');
+          putOrder(orders, summaries, { ...order, isOutOfStock });
+        });
+      }
+
+      function deleteOrder(id) {
+        return write(orderStores, (orders, summaries) => {
+          orders.delete(id);
+          summaries.delete(id);
+        });
+      }
+
+      function clearOrders() {
+        return write(historyStores, (...stores) => stores.forEach(store => store.clear()));
+      }
+
+      function settle(month, channel, shipping, discount, displayedItems) {
+        return write(historyStores, async (orders, summaries, settlements) => {
+          const summariesInMonth = await read(summaries.index('date').getAll(IDBKeyRange.bound(month + '-01', month + '-31')));
+          const candidates = summariesInMonth.filter(order => order.channel === channel && !order.isPaid);
+          if (!candidates.length) throw new Error('這個月份與渠道已無待結訂單');
+          const previous = new Map(displayedItems.map(item => [keyToken(item.id), item]));
+          if (previous.size !== candidates.length || candidates.some(order => {
+            const item = previous.get(keyToken(order.id));
+            return !item || item.unitPrice !== order.unitPrice || item.qty !== order.qty ||
+              item.isOutOfStock !== order.isOutOfStock;
+          })) throw new Error('待結品項已變更，請確認金額後再結清');
+          const batch = {
+            id: orderId('settlement'), month, channel, date: today(),
+            orderIds: candidates.map(order => order.id), returnedOrderIds: [],
+            ...settlementAmounts(subtotal(candidates), shipping, discount)
+          };
+          const affected = await Promise.all(batch.orderIds.map(id => read(orders.get(id))));
+          for (const order of affected) {
+            putOrder(orders, summaries, { ...order, isPaid: true,
+              settlementDate: batch.date, settlementId: batch.id });
+          }
+          settlements.add(batch);
+          return batch;
+        });
+      }
+
+      function getSettlements() {
+        return read(db.transaction('settlements').objectStore('settlements').getAll());
+      }
+
+      function loadChannels(fallback) {
+        return write(['settings'], async settings => {
+          const saved = await read(settings.get('channels'));
+          if (saved) return saved;
+          settings.put(fallback, 'channels');
+          return fallback;
+        });
+      }
+
+      function saveChannels(change) {
+        return write(['settings'], async settings => {
+          const channels = change(await read(settings.get('channels')) || []);
+          settings.put(channels, 'channels');
+          return channels;
+        });
+      }
+
+      function readBackup(fallback) {
+        const tx = db.transaction(['orders', 'settlements', 'settings'], 'readonly');
+        return Promise.all([
+          read(tx.objectStore('orders').getAll()),
+          read(tx.objectStore('settlements').getAll()),
+          read(tx.objectStore('settings').get('channels'))
+        ]).then(([orders, settlements, channels]) => ({
+          orders, settlements, channels: channels ?? fallback
+        }));
+      }
+
+      async function findBackupConflicts(data) {
+        const tx = db.transaction(['orders', 'settlements'], 'readonly');
+        const orders = tx.objectStore('orders');
+        const settlements = tx.objectStore('settlements');
+        const keys = await Promise.all([
+          ...data.orders.map(order => read(orders.getKey(order.id))),
+          ...data.settlements.map(batch => read(settlements.getKey(batch.id)))
+        ]);
+        return keys.filter(key => key !== undefined).length;
+      }
+
+      function writeBackup(data, fallback, confirmedConflicts) {
+        return write([...historyStores, 'settings'], async (orders, summaries, settlements, settings) => {
+          const [saved, prior, existingBatches] = await Promise.all([
+            read(settings.get('channels')),
+            Promise.all(data.orders.map(order => read(orders.get(order.id)))),
+            Promise.all(data.settlements.map(batch => read(settlements.getKey(batch.id))))
+          ]);
+          const conflicts = prior.filter(Boolean).length + existingBatches.filter(key => key !== undefined).length;
+          if (conflicts !== confirmedConflicts) throw new Error('本機資料已變更，請重新匯入並確認是否覆蓋。');
+          const channels = [...new Set([...(saved ?? fallback), ...data.channels])];
+          for (const batch of data.settlements) settlements.put(batch);
+          for (const [index, order] of data.orders.entries()) {
+            const old = prior[index];
+            if (old?.settlementId && old.settlementId !== order.settlementId) await markReturned(settlements, old);
+            putOrder(orders, summaries, order);
+          }
+          settings.put(channels, 'channels');
+          return channels;
+        });
+      }
+
+      return { initDB, getOrder, getSummaries, saveOrder, updateOrder, returnToUnpaid, setStockStatus, deleteOrder,
+        clearOrders, getSettlements, settle, loadChannels, saveChannels, readBackup, findBackupConflicts, writeBackup };
+    })();
+  </script>
+  <script>
     /* ==========================================================================
        1. CONSTANTS & SYSTEM CATEGORIES
        ========================================================================== */
     const DEFAULT_CHANNELS = ['Moby', 'Mina', '319', '痛經', 'Renee'];
     
-    const CATEGORIES = {
-      '女兒': ['上衣', '褲子', '裙子', '洋裝', '外套', '鞋子', '髮飾配件', '內著襪子', '玩具文具', '書籍', '零食點心', '其他'],
-      '兒子': ['上衣', '褲子', '外套', '鞋子', '配件帽襪', '玩具車車', '書籍', '零食點心', '其他'],
-      '自用': ['上衣', '褲子', '裙子', '洋裝', '外套', '鞋包配件', '美妝保養', '美食零食', '生活小物', '其他'],
-      '家用': ['食品生鮮', '日用清潔', '廚房餐具', '收納居家', '常備藥品', '其他']
-    };
-
     // Keyword map for smart auto-classification
     const AUTO_CAT_KEYWORDS = [
       { kw: ['髮夾', '髮圈', '髮飾', '頭飾', '帽子', '圍巾', '手套'], main: '女兒', sub: '髮飾配件' },
@@ -561,7 +1011,20 @@
     /* ==========================================================================
        2. GLOBAL STATE
        ========================================================================== */
-    let db = null;
+    const { CATEGORIES, today, monthsAgo, isDay, normalizeOrder, validateOrder, parseBackup,
+      subtotal, settlementAmounts, safeImage, orderId, keyToken } = OrderRules;
+    const { initDB, getOrder: getOrderDB, saveOrder: saveOrderDB,
+      deleteOrder: deleteOrderDB, clearOrders: clearOrdersDB } = OrderStorage;
+    let toastTimer;
+    let duplicateTimer;
+    let searchTimer;
+    let duplicateRevision = 0;
+    let searchRevision = 0;
+    let settlementRevision = 0;
+    let addingOrder = false;
+    let savingEdit = false;
+    const imageVersions = { add: 0, edit: 0 };
+    const settlementDrafts = new Map();
     let currentTab = 'add';
     let channels = [];
     let dupWindowMonths = 3;
@@ -573,96 +1036,11 @@
       image: '',
       channel: '',
       name: '',
-      spec: '',
-      unitPrice: 0,
-      qty: 1,
-      mainCategory: '女兒',
-      subCategory: '上衣',
-      date: new Date().toISOString().split('T')[0],
       isUserCategoryTouched: false
     };
 
     // Edit Form local state
-    let editFormState = {
-      image: '',
-      channel: '',
-      mainCategory: '女兒',
-      subCategory: '上衣'
-    };
-
-    /* ==========================================================================
-       3. INDEXEDDB SETUP
-       ========================================================================== */
-    function initDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open('DIB_DB', 2);
-        request.onupgradeneeded = (e) => {
-          const dbRef = e.target.result;
-          if (!dbRef.objectStoreNames.contains('orders')) {
-            const store = dbRef.createObjectStore('orders', { keyPath: 'id' });
-            store.createIndex('date', 'date', { unique: false });
-            store.createIndex('channel', 'channel', { unique: false });
-            store.createIndex('isPaid', 'isPaid', { unique: false });
-          }
-        };
-        request.onsuccess = (e) => {
-          db = e.target.result;
-          resolve(db);
-        };
-        request.onerror = (e) => reject(e.target.error);
-      });
-    }
-
-    function getAllOrdersDB() {
-      return new Promise((resolve, reject) => {
-        if (!db) return resolve([]);
-        const tx = db.transaction('orders', 'readonly');
-        const store = tx.objectStore('orders');
-        const req = store.getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    function saveOrderDB(order) {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('orders', 'readwrite');
-        const store = tx.objectStore('orders');
-        const req = store.put(order);
-        req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    function deleteOrderDB(id) {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('orders', 'readwrite');
-        const store = tx.objectStore('orders');
-        const req = store.delete(id);
-        req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    function clearOrdersDB() {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('orders', 'readwrite');
-        const store = tx.objectStore('orders');
-        const req = store.clear();
-        req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    function bulkSaveOrdersDB(ordersList) {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction('orders', 'readwrite');
-        const store = tx.objectStore('orders');
-        ordersList.forEach(o => store.put(o));
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    }
+    let editFormState = { image: '', channel: '' };
 
     /* ==========================================================================
        4. INITIALIZATION & STORAGE LOAD
@@ -670,7 +1048,7 @@
     window.onload = async function() {
       try {
         await initDB();
-        loadChannels();
+        await loadChannels();
         initCategoryDropdowns();
         resetAddFormDate();
         renderHeaderStats();
@@ -687,36 +1065,44 @@
       }
     };
 
-    function loadChannels() {
-      const stored = localStorage.getItem('dib_channels');
-      if (stored) {
-        try {
-          channels = JSON.parse(stored);
-        } catch(e) {
-          channels = [...DEFAULT_CHANNELS];
+    async function loadChannels() {
+      let fallback = [...DEFAULT_CHANNELS];
+      try {
+        const stored = JSON.parse(localStorage.getItem('dib_channels') || 'null');
+        if (Array.isArray(stored) && stored.every(value => typeof value === 'string' && value.trim())) {
+          fallback = [...new Set(stored.map(value => value.trim()))];
         }
-      } else {
-        channels = [...DEFAULT_CHANNELS];
-        localStorage.setItem('dib_channels', JSON.stringify(channels));
+      } catch {
+        // Invalid legacy settings fall back to the built-in channels.
+      }
+      channels = await OrderStorage.loadChannels(fallback);
+    }
+
+    function refreshChannels() {
+      renderAddChannelPills();
+      renderSettingsChannels();
+      if (editingOrderId !== null) renderEditChannelPills();
+    }
+
+    async function changeChannels(change, message) {
+      try {
+        channels = await OrderStorage.saveChannels(change);
+        refreshChannels();
+        showToast(message);
+        return true;
+      } catch (err) {
+        showToast('無法更新渠道：' + err.message, '⚠️');
+        return false;
       }
     }
 
-    function saveChannels() {
-      localStorage.setItem('dib_channels', JSON.stringify(channels));
-      renderAddChannelPills();
-      renderSettingsChannels();
-    }
-
     function resetDefaultChannels() {
-      channels = [...DEFAULT_CHANNELS];
-      saveChannels();
-      showToast('已恢復預設購買渠道');
+      return changeChannels(() => [...DEFAULT_CHANNELS], '已恢復預設購買渠道');
     }
 
     function resetAddFormDate() {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('add-date-input').value = today;
-      addFormState.date = today;
+      const date = today();
+      document.getElementById('add-date-input').value = date;
     }
 
     /* ==========================================================================
@@ -751,16 +1137,89 @@
       document.getElementById('toast-msg').innerText = msg;
       toast.classList.remove('opacity-0', '-translate-y-10');
       toast.classList.add('opacity-100', 'translate-y-0');
-      setTimeout(() => {
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
         toast.classList.remove('opacity-100', 'translate-y-0');
         toast.classList.add('opacity-0', '-translate-y-10');
       }, 2500);
     }
 
+    function element(tag, classes, text) {
+      const node = document.createElement(tag);
+      if (classes) node.className = classes;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function action(text, classes, handler) {
+      const button = element('button', classes, text);
+      button.type = 'button';
+      button.addEventListener('click', handler);
+      return button;
+    }
+
+    const thumbnailObserver = typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver(entries => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          thumbnailObserver.unobserve(entry.target);
+          entry.target.loadThumbnail();
+        }
+      }, { rootMargin: '160px' }) : null;
+
+    function thumbnail(order, imageClasses, placeholderClasses) {
+      const placeholder = element('div', placeholderClasses, '🛍️');
+      if (!order.hasImage) return placeholder;
+      let readingImage;
+      const readImage = () => {
+        readingImage ??= getOrderDB(order.id).then(raw => raw ? normalizeOrder(raw).image : '').catch(() => '');
+        return readingImage;
+      };
+      const button = action('', 'flex-shrink-0 rounded-lg', async () => {
+        const image = await readImage();
+        if (image) openLightbox(image, order.name);
+      });
+      button.setAttribute('aria-label', '放大商品圖片：' + order.name);
+      button.append(placeholder);
+      button.loadThumbnail = async () => {
+        const image = await readImage();
+        if (!image) return;
+        const img = element('img', imageClasses);
+        img.alt = order.name;
+        img.referrerPolicy = 'no-referrer';
+        img.addEventListener('load', () => button.replaceChildren(img), { once: true });
+        img.src = image;
+      };
+      if (thumbnailObserver) requestAnimationFrame(() => {
+        if (button.isConnected) thumbnailObserver.observe(button);
+      });
+      else button.loadThumbnail();
+      return button;
+    }
+
+    function replaceCards(container, children) {
+      if (thumbnailObserver) {
+        container.querySelectorAll('button[aria-label^="放大商品圖片："]').forEach(button => thumbnailObserver.unobserve(button));
+      }
+      const fragment = document.createDocumentFragment();
+      for (const child of children) fragment.append(child);
+      container.replaceChildren(fragment);
+    }
+
+    function fillOptions(select, values, allLabel) {
+      const options = values.map(value => new Option(value, value));
+      if (allLabel !== undefined) options.unshift(new Option(allLabel, ''));
+      replaceCards(select, options);
+    }
+
     async function renderHeaderStats() {
-      const all = await getAllOrdersDB();
-      const unpaidCount = all.filter(o => !o.isPaid && !o.isOutOfStock).length;
-      document.getElementById('header-stats').innerText = `已記 ${all.length} 筆 | 待結 ${unpaidCount} 筆`;
+      try {
+        const orders = await OrderStorage.getSummaries();
+        const unpaidCount = orders.filter(o => !o.isPaid && !o.isOutOfStock).length;
+        document.getElementById('header-stats').textContent = `已記 ${orders.length} 筆 | 待結 ${unpaidCount} 筆`;
+      } catch (err) {
+        showToast('無法讀取訂單統計：' + err.message, '⚠️');
+      }
     }
 
     /* ==========================================================================
@@ -771,8 +1230,8 @@
       const editMain = document.getElementById('edit-main-cat');
       const mainKeys = Object.keys(CATEGORIES);
 
-      addMain.innerHTML = mainKeys.map(k => `<option value="${k}">${k}</option>`).join('');
-      editMain.innerHTML = mainKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+      fillOptions(addMain, mainKeys);
+      fillOptions(editMain, mainKeys);
 
       onMainCatChange('add', mainKeys[0]);
       onMainCatChange('edit', mainKeys[0]);
@@ -780,16 +1239,9 @@
 
     function onMainCatChange(target, mainCat) {
       const subSelect = document.getElementById(`${target}-sub-cat`);
-      const subList = CATEGORIES[mainCat] || CATEGORIES['女兒'];
-      subSelect.innerHTML = subList.map(s => `<option value="${s}">${s}</option>`).join('');
-      
-      if (target === 'add') {
-        addFormState.mainCategory = mainCat;
-        addFormState.subCategory = subList[0];
-      } else {
-        editFormState.mainCategory = mainCat;
-        editFormState.subCategory = subList[0];
-      }
+      const subList = Object.hasOwn(CATEGORIES, mainCat) ? CATEGORIES[mainCat] : ['其他'];
+      fillOptions(subSelect, subList);
+
     }
 
     function autoClassifyCategory(nameText) {
@@ -799,54 +1251,9 @@
           document.getElementById('add-main-cat').value = rule.main;
           onMainCatChange('add', rule.main);
           document.getElementById('add-sub-cat').value = rule.sub;
-          addFormState.mainCategory = rule.main;
-          addFormState.subCategory = rule.sub;
           break;
         }
       }
-    }
-
-    function normalizeOrder(raw) {
-      // Image normalization (preserves images from ANY past backup schema)
-      const img = raw.image || raw.imageData || raw.photo || raw.img || raw.imageBase64 || raw.thumbnail || '';
-      
-      // Category normalization
-      let mainCat = '自用';
-      let subCat = '其他';
-
-      if (raw.mainCategory && raw.subCategory) {
-        mainCat = raw.mainCategory;
-        subCat = raw.subCategory;
-      } else if (raw.category) {
-        if (typeof raw.category === 'string' && raw.category.includes('-')) {
-          const parts = raw.category.split('-');
-          mainCat = parts[0];
-          subCat = parts[1] || '其他';
-        } else if (CATEGORIES[raw.category]) {
-          mainCat = raw.category;
-          subCat = raw.subCategory || CATEGORIES[mainCat][0];
-        }
-      } else if (raw.majorCategory) {
-        mainCat = raw.majorCategory;
-        subCat = raw.minorCategory || '其他';
-      }
-
-      return {
-        id: raw.id || 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-        channel: raw.channel || '網購平台',
-        name: raw.name || raw.itemName || raw.title || '未命名商品',
-        spec: raw.spec || raw.specification || raw.colorSize || '',
-        unitPrice: Number(raw.unitPrice || raw.price || 0),
-        qty: Number(raw.qty || raw.quantity || 1),
-        mainCategory: mainCat,
-        subCategory: subCat,
-        date: raw.date || new Date().toISOString().split('T')[0],
-        isPaid: Boolean(raw.isPaid || raw.paid),
-        isOutOfStock: Boolean(raw.isOutOfStock || raw.outOfStock),
-        note: raw.note || raw.notes || '',
-        image: img,
-        settlementDate: raw.settlementDate || null
-      };
     }
 
     /* ==========================================================================
@@ -892,8 +1299,10 @@
     async function handleImageSelect(event, target) {
       const file = event.target.files[0];
       if (!file) return;
+      const revision = ++imageVersions[target];
       try {
         const compressedBase64 = await compressImageFile(file);
+        if (revision !== imageVersions[target]) return;
         setImageData(target, compressedBase64);
         showToast('圖片已上傳並自動壓縮');
       } catch (err) {
@@ -903,14 +1312,17 @@
 
     function handleGlobalPaste(e) {
       if (currentTab !== 'add') return;
-      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      const items = e.clipboardData?.items || [];
       for (const item of items) {
         if (item.type.indexOf('image') !== -1) {
           const blob = item.getAsFile();
+          if (!blob) continue;
+          const revision = ++imageVersions.add;
           compressImageFile(blob).then(b64 => {
+            if (revision !== imageVersions.add) return;
             setImageData('add', b64);
             showToast('已成功貼上剪貼簿圖片！');
-          });
+          }).catch(() => showToast('無法讀取剪貼簿圖片。', '⚠️'));
           break;
         }
       }
@@ -929,6 +1341,7 @@
     }
 
     function removeImage(target) {
+      imageVersions[target]++;
       if (target === 'add') {
         addFormState.image = '';
         document.getElementById('add-img-input').value = '';
@@ -943,7 +1356,7 @@
     }
 
     function openLightbox(imgSrc, titleText) {
-      if (!imgSrc || imgSrc.includes('data:image/svg+xml')) return;
+      if (!safeImage(imgSrc)) return;
       document.getElementById('lightbox-img').src = imgSrc;
       document.getElementById('lightbox-title').innerText = titleText || '商品圖片';
       document.getElementById('lightbox-modal').classList.remove('hidden');
@@ -978,7 +1391,9 @@
         if (!addFormState.isUserCategoryTouched) {
           autoClassifyCategory(val);
         }
-        checkDuplicateWarning();
+        clearTimeout(duplicateTimer);
+        duplicateRevision++;
+        duplicateTimer = setTimeout(checkDuplicateWarning, 160);
       }
     }
 
@@ -996,83 +1411,63 @@
     }
 
     async function checkDuplicateWarning() {
-      const queryName = (addFormState.name || '').trim();
-      const warningBox = document.getElementById('duplicate-warning');
-      const listContainer = document.getElementById('duplicate-list');
-
-      if (!queryName || queryName.length < 1) {
-        warningBox.classList.add('hidden');
+      clearTimeout(duplicateTimer);
+      const revision = ++duplicateRevision;
+      const query = addFormState.name.trim().toLowerCase();
+      const warning = document.getElementById('duplicate-warning');
+      const list = document.getElementById('duplicate-list');
+      if (!query) {
+        warning.classList.add('hidden');
+        replaceCards(list, []);
         return;
       }
-
-      const allOrders = await getAllOrdersDB();
-      const now = new Date();
-      const minDate = new Date();
-      minDate.setMonth(now.getMonth() - dupWindowMonths);
-
-      // Character set & substring matching (e.g. "喇叭褲" matches "微絨蝴蝶結喇叭褲", "褲裙" matches "裙褲")
-      const queryChars = Array.from(new Set(queryName.replace(/\s+/g, '')));
-
-      const matches = allOrders.filter(o => {
-        const orderDate = new Date(o.date);
-        if (orderDate < minDate) return false;
-        
-        const oName = (o.name || '').toLowerCase();
-        const qName = queryName.toLowerCase();
-
-        // Substring match
-        if (oName.includes(qName) || qName.includes(oName)) return true;
-
-        // Character overlap match (> 60% characters match)
-        const matchedChars = queryChars.filter(c => oName.includes(c.toLowerCase()));
-        return (matchedChars.length / queryChars.length) >= 0.6;
-      });
-
-      if (matches.length === 0) {
-        warningBox.classList.add('hidden');
-      } else {
-        warningBox.classList.remove('hidden');
-        listContainer.innerHTML = matches.map(m => `
-          <div class="flex items-center gap-2.5 bg-white p-2 rounded-xl border border-amber-200 shadow-sm text-xs">
-            ${m.image 
-              ? `<img src="${m.image}" onclick="openLightbox('${m.image}', '${m.name}')" class="w-11 h-11 object-cover rounded-lg border flex-shrink-0 cursor-pointer">` 
-              : `<div class="w-11 h-11 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0 text-base">🛍️</div>`
-            }
-            <div class="flex-1 min-w-0">
-              <div class="font-bold text-slate-800 truncate">${m.name}</div>
-              <div class="text-[11px] text-slate-500 flex gap-2">
-                <span>渠道: <b>${m.channel}</b></span>
-                <span>規格: <b>${m.spec || '無'}</b></span>
-              </div>
-              <div class="text-[10px] text-amber-700">喊單日期: ${m.date} (${m.isPaid ? '已付款' : '未付款'})</div>
-            </div>
-          </div>
-        `).join('');
+      try {
+        const orders = await OrderStorage.getSummaries(monthsAgo(dupWindowMonths), today());
+        if (revision !== duplicateRevision) return;
+        const chars = [...new Set(query.replace(/\s+/g, ''))];
+        const matches = orders.filter(order => {
+          const name = order.name.toLowerCase();
+          return name.includes(query) || query.includes(name) ||
+            chars.filter(char => name.includes(char)).length / chars.length >= 0.6;
+        });
+        warning.classList.toggle('hidden', matches.length === 0);
+        replaceCards(list, matches.map(order => {
+          const row = element('div', 'flex items-center gap-2.5 bg-white p-2 rounded-xl border border-amber-200 shadow-sm text-xs');
+          const details = element('div', 'flex-1 min-w-0');
+          details.append(
+            element('div', 'font-bold text-slate-800 truncate', order.name),
+            element('div', 'text-[11px] text-slate-500', `渠道：${order.channel}　規格：${order.spec || '無'}`),
+            element('div', 'text-[10px] text-amber-700', `喊單日期：${order.date}（${order.isPaid ? '已付款' : '未付款'}）`)
+          );
+          row.append(thumbnail(order, 'w-11 h-11 object-cover rounded-lg border',
+            'w-11 h-11 rounded-lg bg-amber-100 grid place-items-center flex-shrink-0'), details);
+          return row;
+        }));
+      } catch (err) {
+        if (revision === duplicateRevision) showToast('無法檢查重複訂單：' + err.message, '⚠️');
       }
     }
 
     /* ==========================================================================
        9. ADD ORDER SUBMISSION
        ========================================================================== */
+    function renderChannelPills(target, values, selected) {
+      const buttons = values.map(channel => action(
+        channel === '網購平台' && target === 'add' ? '🛒 網購平台' : channel,
+        'px-3 py-1 rounded-full text-xs font-semibold border ' +
+          (selected === channel ? 'bg-coral-500 text-white border-coral-500' : 'bg-slate-100 text-slate-600 border-slate-200'),
+        () => selectChannel(target, channel)
+      ));
+      document.getElementById(`${target}-channel-pills`).replaceChildren(...buttons);
+    }
+
     function renderAddChannelPills() {
-      const container = document.getElementById('add-channel-pills');
-      const allChannels = [...channels, '網購平台'];
-
-      container.innerHTML = allChannels.map(c => `
-        <button type="button" onclick="selectChannel('add', '${c}')" 
-                class="channel-pill px-3 py-1 rounded-full text-xs font-semibold border transition ${
-                  addFormState.channel === c 
-                    ? 'bg-coral-500 text-white border-coral-500 shadow-sm' 
-                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                }">
-          ${c === '網購平台' ? '🛒 網購平台' : c}
-        </button>
-      `).join('');
-
-      // Auto select first channel if unselected
-      if (!addFormState.channel && channels.length > 0) {
+      const allChannels = [...new Set([...channels, '網購平台'])];
+      if (!addFormState.channel && channels.length) {
         selectChannel('add', channels[0]);
+        return;
       }
+      renderChannelPills('add', allChannels, addFormState.channel);
     }
 
     function selectChannel(target, channelName) {
@@ -1096,7 +1491,8 @@
     }
 
     async function submitAddOrder(keepNextSpec = false) {
-      const name = (document.getElementById('add-name-input').value || '').trim();
+      if (addingOrder) return;
+      const name = document.getElementById('add-name-input').value.trim();
       if (!name) {
         showToast('請輸入品項名稱！', '⚠️');
         return;
@@ -1108,11 +1504,11 @@
       const qty = Number(document.getElementById('add-qty-input').value || 1);
       const mainCat = document.getElementById('add-main-cat').value;
       const subCat = document.getElementById('add-sub-cat').value;
-      const date = document.getElementById('add-date-input').value || new Date().toISOString().split('T')[0];
+      const date = document.getElementById('add-date-input').value || today();
       const isNetBuy = (channel === '網購平台');
 
       const newOrder = {
-        id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        id: orderId('ord'),
         channel: channel,
         name: name,
         spec: spec,
@@ -1128,11 +1524,19 @@
         settlementDate: isNetBuy ? date : null
       };
 
-      await saveOrderDB(newOrder);
+      addingOrder = true;
+      try {
+        validateOrder(newOrder);
+        await saveOrderDB(newOrder);
+      } catch (err) {
+        showToast('無法新增訂單：' + err.message, '⚠️');
+        return;
+      } finally {
+        addingOrder = false;
+      }
 
       if (keepNextSpec) {
         document.getElementById('add-spec-input').value = '';
-        addFormState.spec = '';
         showToast('已儲存！保留渠道/品項/圖片，請輸入下一款規格', '➕');
       } else {
         // Full reset form
@@ -1142,9 +1546,8 @@
         document.getElementById('add-qty-input').value = '1';
         removeImage('add');
         addFormState.name = '';
-        addFormState.spec = '';
-        addFormState.unitPrice = 0;
-        addFormState.qty = 1;
+        addFormState.isUserCategoryTouched = false;
+        duplicateRevision++;
         document.getElementById('duplicate-warning').classList.add('hidden');
         showToast('訂單成功儲存！', '💾');
       }
@@ -1175,145 +1578,120 @@
       renderSearchTab();
     }
 
-    async function renderSearchTab() {
-      const allOrders = await getAllOrdersDB();
-      const normalizedOrders = allOrders.map(normalizeOrder);
-
-      // Populate filter dropdowns
-      const channelSelect = document.getElementById('filter-channel');
-      const categorySelect = document.getElementById('filter-category');
-
-      const uniqueChannels = Array.from(new Set(normalizedOrders.map(o => o.channel)));
-      const uniqueCats = Array.from(new Set(normalizedOrders.map(o => `${o.mainCategory}-${o.subCategory}`)));
-
-      const currentChanVal = channelSelect.value;
-      const currentCatVal = categorySelect.value;
-
-      channelSelect.innerHTML = `<option value="ALL">所有購買渠道 (${uniqueChannels.length})</option>` +
-        uniqueChannels.map(c => `<option value="${c}">${c}</option>`).join('');
-      
-      categorySelect.innerHTML = `<option value="ALL">所有分類 (${uniqueCats.length})</option>` +
-        uniqueCats.map(c => `<option value="${c}">${c}</option>`).join('');
-
-      channelSelect.value = uniqueChannels.includes(currentChanVal) ? currentChanVal : 'ALL';
-      categorySelect.value = uniqueCats.includes(currentCatVal) ? currentCatVal : 'ALL';
-
-      // Filtering Logic
-      const keyword = (document.getElementById('search-keyword').value || '').toLowerCase().trim();
-      const selChannel = channelSelect.value;
-      const selCategory = categorySelect.value;
-
-      const now = new Date();
-      let minDate = null;
-      let maxDate = null;
-
-      if (searchDateFilterType === '1M') {
-        minDate = new Date(); minDate.setMonth(now.getMonth() - 1);
-      } else if (searchDateFilterType === '3M') {
-        minDate = new Date(); minDate.setMonth(now.getMonth() - 3);
-      } else if (searchDateFilterType === '6M') {
-        minDate = new Date(); minDate.setMonth(now.getMonth() - 6);
-      } else if (searchDateFilterType === 'CUSTOM') {
-        const startDateVal = document.getElementById('search-start-date').value;
-        const endDateVal = document.getElementById('search-end-date').value;
-        if (startDateVal) minDate = new Date(startDateVal);
-        if (endDateVal) maxDate = new Date(endDateVal);
-      }
-
-      const filtered = normalizedOrders.filter(o => {
-        // Channel filter
-        if (selChannel !== 'ALL' && o.channel !== selChannel) return false;
-
-        // Category filter
-        if (selCategory !== 'ALL' && `${o.mainCategory}-${o.subCategory}` !== selCategory) return false;
-
-        // Date filter
-        const oDate = new Date(o.date);
-        if (minDate && oDate < minDate) return false;
-        if (maxDate && oDate > maxDate) return false;
-
-        // Keyword filter
-        if (keyword) {
-          const matchTarget = `${o.name} ${o.spec} ${o.channel} ${o.mainCategory} ${o.subCategory} ${o.note}`.toLowerCase();
-          const kwChars = Array.from(new Set(keyword.split('')));
-          return kwChars.every(c => matchTarget.includes(c));
-        }
-
-        return true;
-      });
-
-      // Sort by Date Descending
-      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      const container = document.getElementById('search-orders-list');
-
-      if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="bg-white rounded-2xl p-8 text-center text-slate-400 space-y-2 border border-slate-100">
-            <span class="text-4xl block">🔍</span>
-            <p class="text-xs font-medium">找不到符合條件的團購訂單</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = filtered.map(o => {
-        const totalPrice = o.isOutOfStock ? 0 : (o.unitPrice * o.qty);
-        return `
-          <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex gap-3 items-center relative ${o.isOutOfStock ? 'opacity-70 bg-slate-50' : ''}">
-            <!-- Thumbnail -->
-            ${o.image 
-              ? `<img src="${o.image}" onclick="openLightbox('${o.image}', '${o.name}')" class="w-16 h-16 object-cover rounded-xl border border-slate-200 flex-shrink-0 cursor-pointer shadow-sm">`
-              : `<div class="w-16 h-16 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-400 flex-shrink-0 text-xl font-bold">🛍️</div>`
-            }
-
-            <!-- Details -->
-            <div class="flex-1 min-w-0 space-y-1">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-coral-600">${o.channel}</span>
-                <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">${o.mainCategory}-${o.subCategory}</span>
-                ${o.isOutOfStock ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500 text-white">已斷貨</span>` : ''}
-                ${o.isPaid ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">已付款</span>` : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">未付款</span>`}
-              </div>
-
-              <h3 class="text-xs font-bold text-slate-800 truncate ${o.isOutOfStock ? 'line-through text-slate-400' : ''}">${o.name}</h3>
-              
-              <div class="text-[11px] text-slate-500 flex justify-between items-center">
-                <span>規格: <b class="text-slate-700">${o.spec || '預設'}</b> × ${o.qty}</span>
-                <span class="text-xs font-extrabold ${o.isOutOfStock ? 'line-through text-slate-400' : 'text-slate-800'}">
-                  ${o.isOutOfStock ? `<span class="text-rose-500 font-bold">$0</span> (原 $${o.unitPrice * o.qty})` : `$${totalPrice}`}
-                </span>
-              </div>
-
-              <div class="text-[10px] text-slate-400 flex justify-between items-center pt-0.5 border-t border-slate-50">
-                <span>喊單日: ${o.date}</span>
-                <div class="flex gap-2">
-                  <button onclick="openEditModal('${o.id}')" class="text-xs text-indigo-600 font-bold hover:underline">✏️ 編輯</button>
-                  <button onclick="confirmDeleteOrder('${o.id}')" class="text-xs text-rose-500 font-bold hover:underline">🗑️ 刪除</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
+    function scheduleSearch() {
+      clearTimeout(searchTimer);
+      searchRevision++;
+      searchTimer = setTimeout(() => renderSearchTab(false), 160);
     }
 
-    /* ==========================================================================
-       11. EDIT ORDER MODAL
-       ========================================================================== */
+    function searchDates() {
+      if (searchDateFilterType === 'CUSTOM') {
+        return [document.getElementById('search-start-date').value, document.getElementById('search-end-date').value];
+      }
+      if (searchDateFilterType === 'ALL') return [];
+      return [monthsAgo(Number.parseInt(searchDateFilterType, 10)), today()];
+    }
+
+    function orderCategory(order) {
+      return `${order.mainCategory}-${order.subCategory}`;
+    }
+
+    async function renderSearchTab(refreshOptions = true) {
+      clearTimeout(searchTimer);
+      const revision = ++searchRevision;
+      const [min, max] = searchDates();
+      const container = document.getElementById('search-orders-list');
+      try {
+        const query = OrderStorage.getSummaries(min, max);
+        const [orders, all] = await Promise.all([
+          query, refreshOptions ? (min || max ? OrderStorage.getSummaries() : query) : null
+        ]);
+        if (revision !== searchRevision) return;
+        const channelSelect = document.getElementById('filter-channel');
+        const categorySelect = document.getElementById('filter-category');
+        if (all) {
+          const channels = [...new Set(all.map(order => order.channel))];
+          const categories = [...new Set(all.map(orderCategory))];
+          const previousChannel = channelSelect.value;
+          const previousCategory = categorySelect.value;
+          fillOptions(channelSelect, channels, `所有購買渠道 (${channels.length})`);
+          fillOptions(categorySelect, categories, `所有分類 (${categories.length})`);
+          channelSelect.value = channels.includes(previousChannel) ? previousChannel : '';
+          categorySelect.value = categories.includes(previousCategory) ? previousCategory : '';
+        }
+        const keyword = document.getElementById('search-keyword').value.toLowerCase().trim();
+        const chars = [...new Set(keyword)];
+        const filtered = orders.filter(order => {
+          if (channelSelect.value && order.channel !== channelSelect.value) return false;
+          if (categorySelect.value && orderCategory(order) !== categorySelect.value) return false;
+          const target = `${order.name} ${order.spec} ${order.channel} ${orderCategory(order)} ${order.note}`.toLowerCase();
+          return chars.every(char => target.includes(char));
+        }).sort((a, b) => b.date.localeCompare(a.date));
+        replaceCards(container, filtered.map(renderOrderCard));
+        if (!filtered.length) container.append(element('p',
+          'bg-white rounded-2xl p-8 text-center text-slate-600 text-xs font-bold border border-slate-100',
+          min && max && min > max ? '起始日期須早於或等於結束日期' : '找不到符合條件的團購訂單'));
+      } catch (err) {
+        if (revision === searchRevision) showToast('無法查詢訂單：' + err.message, '⚠️');
+      }
+    }
+
+    function formatMoney(value) {
+      return '$' + value.toLocaleString('zh-TW', { maximumFractionDigits: 2 });
+    }
+
+    function orderAmount(order) {
+      try { return formatMoney(subtotal([order])); }
+      catch { return '金額無效'; }
+    }
+
+    function renderOrderCard(order) {
+      const row = element('div', 'bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex gap-3 items-center');
+      const details = element('div', 'flex-1 min-w-0 space-y-1');
+      const badges = element('div', 'flex items-center gap-1.5 flex-wrap');
+      const badge = 'text-[10px] font-bold px-2 py-0.5 rounded-md ';
+      badges.append(element('span', badge + 'bg-rose-100 text-coral-600', order.channel),
+        element('span', badge + 'bg-slate-100 text-slate-600', orderCategory(order)),
+        element('span', badge + (order.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'),
+          order.isPaid ? '已付款' : '未付款'));
+      if (order.isOutOfStock) badges.append(element('span', badge + 'bg-rose-500 text-white', '已斷貨'));
+      const summary = element('div', 'text-[11px] text-slate-600 flex justify-between items-center');
+      summary.append(element('span', '', `規格：${order.spec || '預設'} × ${order.qty}`),
+        element('span', 'text-xs font-extrabold', order.isOutOfStock
+          ? `$0（原 ${orderAmount({ ...order, isOutOfStock: false })}）` : orderAmount(order)));
+      const footer = element('div', 'text-[10px] text-slate-600 flex justify-between items-center pt-1 border-t border-slate-50');
+      const buttons = element('div', 'flex gap-2');
+      buttons.append(
+        action('✏️ 編輯', 'text-xs text-indigo-600 font-bold hover:underline', () => openEditModal(order.id)),
+        action('🗑️ 刪除', 'text-xs text-rose-600 font-bold hover:underline', () => confirmDeleteOrder(order.id))
+      );
+      footer.append(element('span', '', `喊單日：${order.date}`), buttons);
+      details.append(badges,
+        element('h3', 'text-xs font-bold text-slate-800 truncate' + (order.isOutOfStock ? ' line-through' : ''), order.name),
+        summary, footer);
+      row.append(thumbnail(order, 'w-16 h-16 object-cover rounded-xl border border-slate-200 shadow-sm',
+        'w-16 h-16 rounded-xl bg-rose-50 grid place-items-center flex-shrink-0'), details);
+      return row;
+    }
+
+    async function getOrderForEdit(orderId) {
+      try {
+        const order = await getOrderDB(orderId);
+        if (!order) showToast('找不到這筆訂單，請重新查詢。', '⚠️');
+        return order;
+      } catch (err) {
+        showToast('無法讀取訂單：' + err.message, '⚠️');
+      }
+    }
+
     async function openEditModal(orderId) {
-      editingOrderId = orderId;
-      const allOrders = await getAllOrdersDB();
-      const raw = allOrders.find(o => o.id === orderId);
+      const raw = await getOrderForEdit(orderId);
       if (!raw) return;
+      editingOrderId = orderId;
+      imageVersions.edit++;
 
       const o = normalizeOrder(raw);
-      editFormState = {
-        image: o.image,
-        channel: o.channel,
-        mainCategory: o.mainCategory,
-        subCategory: o.subCategory
-      };
+      editFormState = { image: o.image, channel: o.channel };
 
       document.getElementById('edit-name-input').value = o.name;
       document.getElementById('edit-spec-input').value = o.spec;
@@ -1324,15 +1702,21 @@
       document.getElementById('edit-is-paid').checked = o.isPaid;
       document.getElementById('edit-note-input').value = o.note || '';
 
-      document.getElementById('edit-main-cat').value = o.mainCategory;
+      const mainSelect = document.getElementById('edit-main-cat');
+      const subSelect = document.getElementById('edit-sub-cat');
+      fillOptions(mainSelect, [...new Set([...Object.keys(CATEGORIES), o.mainCategory])]);
+      mainSelect.value = o.mainCategory;
       onMainCatChange('edit', o.mainCategory);
-      document.getElementById('edit-sub-cat').value = o.subCategory;
+      if (![...subSelect.options].some(option => option.value === o.subCategory)) {
+        subSelect.add(new Option(o.subCategory, o.subCategory));
+      }
+      subSelect.value = o.subCategory;
 
-      renderEditChannelPills();
       selectChannel('edit', o.channel);
+      document.getElementById('edit-img-input').value = '';
 
-      if (o.image) {
-        document.getElementById('edit-img-preview').src = o.image;
+      if (safeImage(o.image)) {
+        document.getElementById('edit-img-preview').src = safeImage(o.image);
       } else {
         removeImage('edit');
       }
@@ -1341,33 +1725,26 @@
     }
 
     function renderEditChannelPills() {
-      const container = document.getElementById('edit-channel-pills');
-      container.innerHTML = channels.map(c => `
-        <button type="button" onclick="selectChannel('edit', '${c}')" 
-                class="px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                  editFormState.channel === c 
-                    ? 'bg-coral-500 text-white border-coral-500' 
-                    : 'bg-slate-100 text-slate-600 border-slate-200'
-                }">${c}</button>
-      `).join('');
+      renderChannelPills('edit', channels, editFormState.channel);
     }
 
     function closeEditModal() {
       document.getElementById('edit-modal').classList.add('hidden');
       editingOrderId = null;
+      imageVersions.edit++;
     }
 
     async function saveEditOrder() {
-      if (!editingOrderId) return;
+      const orderId = editingOrderId;
+      if (orderId === null || savingEdit) return;
       const name = document.getElementById('edit-name-input').value.trim();
       if (!name) {
         showToast('品項名稱不可為空！', '⚠️');
         return;
       }
 
-      const allOrders = await getAllOrdersDB();
-      const existing = allOrders.find(o => o.id === editingOrderId);
-      if (!existing) return;
+      const existing = await getOrderForEdit(orderId);
+      if (!existing || editingOrderId !== orderId) return;
 
       const updated = {
         ...existing,
@@ -1385,8 +1762,17 @@
         image: editFormState.image
       };
 
-      await saveOrderDB(updated);
-      closeEditModal();
+      savingEdit = true;
+      try {
+        validateOrder(updated);
+        await OrderStorage.updateOrder(updated);
+      } catch (err) {
+        showToast('無法儲存變更：' + (err?.message || '資料庫寫入失敗'), '⚠️');
+        return;
+      } finally {
+        savingEdit = false;
+      }
+      if (editingOrderId === orderId) closeEditModal();
       showToast('訂單已更新！', '✅');
 
       if (currentTab === 'search') renderSearchTab();
@@ -1396,7 +1782,12 @@
 
     async function confirmDeleteOrder(orderId) {
       if (confirm('確定要刪除這筆團購紀錄嗎？')) {
-        await deleteOrderDB(orderId);
+        try {
+          await deleteOrderDB(orderId);
+        } catch (err) {
+          showToast('無法刪除訂單：' + err.message, '⚠️');
+          return;
+        }
         showToast('訂單已成功刪除');
         if (currentTab === 'search') renderSearchTab();
         if (currentTab === 'settlement') renderSettlementTab();
@@ -1408,183 +1799,181 @@
        12. TAB 3: 月結對帳 (MONTHLY SETTLEMENT)
        ========================================================================== */
     async function renderSettlementTab() {
-      const allOrders = await getAllOrdersDB();
-      const orders = allOrders.map(normalizeOrder);
-
-      const unpaidOrders = orders.filter(o => !o.isPaid);
-      const settledOrders = orders.filter(o => o.isPaid);
-
-      // Calculate Total Unpaid Amount
-      const unpaidTotal = unpaidOrders.reduce((sum, o) => sum + (o.isOutOfStock ? 0 : (o.unitPrice * o.qty)), 0);
-      document.getElementById('settlement-unpaid-total').innerText = `$${unpaidTotal}`;
-
-      // Group unpaid orders by YYYY-MM and channel
-      const groups = {};
-      unpaidOrders.forEach(o => {
-        const ym = o.date ? o.date.substring(0, 7) : '未指定月份';
-        const key = `${ym}___${o.channel}`;
-        if (!groups[key]) {
-          groups[key] = { ym, channel: o.channel, items: [] };
+      const revision = ++settlementRevision;
+      try {
+        const [orders, batches] = await Promise.all([OrderStorage.getSummaries(), OrderStorage.getSettlements()]);
+        if (revision !== settlementRevision) return;
+        const unpaid = orders.filter(order => !order.isPaid);
+        const paid = orders.filter(order => order.isPaid);
+        const groups = new Map();
+        for (const order of unpaid) {
+          const month = isDay(order.date) ? order.date.slice(0, 7) : '';
+          const key = keyToken([month, order.channel]);
+          if (!groups.has(key)) groups.set(key, { key, month, channel: order.channel, items: [] });
+          groups.get(key).items.push(order);
         }
-        groups[key].items.push(o);
-      });
-
-      const unpaidContainer = document.getElementById('unpaid-groups-container');
-
-      if (Object.keys(groups).length === 0) {
-        unpaidContainer.innerHTML = `
-          <div class="bg-white rounded-2xl p-8 text-center text-slate-400 space-y-2 border border-slate-100 shadow-sm">
-            <span class="text-4xl block">🎉</span>
-            <p class="text-xs font-bold text-slate-600">太棒了！所有團購訂單均已結清對帳！</p>
-          </div>
-        `;
-      } else {
-        unpaidContainer.innerHTML = Object.entries(groups).map(([groupKey, group]) => {
-          const groupSubtotal = group.items.reduce((sum, item) => sum + (item.isOutOfStock ? 0 : (item.unitPrice * item.qty)), 0);
-          const safeKey = groupKey.replace(/[^a-zA-Z0-9]/g, '_');
-
-          return `
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100/90 space-y-3">
-              <!-- Group Header -->
-              <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-extrabold text-slate-800">${group.ym}</span>
-                  <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white">${group.channel}</span>
-                </div>
-                <span class="text-xs text-slate-500 font-medium">共 ${group.items.length} 件商品</span>
-              </div>
-
-              <!-- Group Items List -->
-              <div class="space-y-2">
-                ${group.items.map(item => `
-                  <div class="flex items-center gap-2.5 p-2 bg-slate-50/70 rounded-xl border border-slate-100 text-xs">
-                    ${item.image 
-                      ? `<img src="${item.image}" onclick="openLightbox('${item.image}', '${item.name}')" class="w-11 h-11 object-cover rounded-lg border border-slate-200 flex-shrink-0 cursor-pointer">`
-                      : `<div class="w-11 h-11 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-400 flex-shrink-0 text-base font-bold">🛍️</div>`
-                    }
-                    
-                    <div class="flex-1 min-w-0">
-                      <div class="font-bold text-slate-800 truncate ${item.isOutOfStock ? 'line-through text-slate-400' : ''}">${item.name}</div>
-                      <div class="text-[11px] text-slate-500">規格: ${item.spec || '預設'} (${item.date})</div>
-                    </div>
-
-                    <div class="text-right flex-shrink-0 space-y-1">
-                      <div class="font-extrabold ${item.isOutOfStock ? 'line-through text-slate-400' : 'text-slate-800'}">
-                        ${item.isOutOfStock ? '$0' : `$${item.unitPrice * item.qty}`}
-                      </div>
-                      <div class="flex gap-1 justify-end">
-                        <button onclick="toggleStockStatus('${item.id}', ${!item.isOutOfStock})" class="px-1.5 py-0.5 rounded text-[10px] font-bold ${item.isOutOfStock ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-rose-100 hover:text-rose-600'}">
-                          ${item.isOutOfStock ? '取消斷貨' : '斷貨'}
-                        </button>
-                        <button onclick="openEditModal('${item.id}')" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">✏️</button>
-                      </div>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-
-              <!-- Group Settlement Calculation Footer -->
-              <div class="pt-2 border-t border-slate-100 space-y-2 bg-rose-50/40 p-3 rounded-xl">
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                  <div class="flex items-center gap-1">
-                    <span class="text-slate-500 font-medium">運費 (+):</span>
-                    <input type="number" id="shipping-${safeKey}" value="0" min="0" oninput="updateGroupTotal('${safeKey}', ${groupSubtotal})" class="w-16 p-1 border border-slate-200 rounded text-center font-bold bg-white">
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <span class="text-slate-500 font-medium">折抵 (-):</span>
-                    <input type="number" id="discount-${safeKey}" value="0" min="0" oninput="updateGroupTotal('${safeKey}', ${groupSubtotal})" class="w-16 p-1 border border-slate-200 rounded text-center font-bold bg-white">
-                  </div>
-                </div>
-
-                <div class="flex justify-between items-center pt-1">
-                  <div>
-                    <span class="text-xs text-slate-600 font-bold block">應付總額</span>
-                    <span id="final-total-${safeKey}" class="text-base font-extrabold text-coral-600">$${groupSubtotal}</span>
-                  </div>
-                  <button onclick="settleGroup('${groupKey}', '${safeKey}')" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow transition">
-                    一鍵全數結清 ✅
-                  </button>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
+        document.getElementById('settlement-unpaid-total').textContent = unpaid.length
+          ? orderAmountTotal(unpaid) : '$0';
+        const unpaidList = document.getElementById('unpaid-groups-container');
+        replaceCards(unpaidList, Array.from(groups.values(), renderSettlementGroup));
+        if (!unpaid.length) unpaidList.append(element('p',
+          'bg-white rounded-2xl p-8 text-center text-xs text-slate-600 font-bold border border-slate-100',
+          '所有團購訂單均已結清對帳。'));
+        document.getElementById('settled-count').textContent = paid.length;
+        const settled = document.getElementById('settled-list');
+        replaceCards(settled, batches.sort((a, b) => b.date.localeCompare(a.date)).map(renderSettlementRecord)
+          .concat(paid.map(renderPaidOrder)));
+      } catch (err) {
+        if (revision === settlementRevision) showToast('無法讀取月結資料：' + err.message, '⚠️');
       }
-
-      // Settled items history
-      document.getElementById('settled-count').innerText = settledOrders.length;
-      const settledContainer = document.getElementById('settled-list');
-      settledContainer.innerHTML = settledOrders.map(o => `
-        <div class="flex items-center justify-between p-2 bg-slate-50 rounded-xl text-xs border border-slate-100">
-          <div class="flex items-center gap-2 min-w-0">
-            ${o.image ? `<img src="${o.image}" onclick="openLightbox('${o.image}', '${o.name}')" class="w-8 h-8 rounded object-cover cursor-pointer">` : ''}
-            <div class="truncate">
-              <span class="font-bold text-slate-700">${o.name}</span>
-              <span class="text-[10px] text-slate-400 block">${o.channel} | ${o.date}</span>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <span class="font-extrabold text-slate-700">$${o.isOutOfStock ? 0 : o.unitPrice * o.qty}</span>
-            <button onclick="unsettleOrder('${o.id}')" class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 hover:bg-amber-100 font-bold">退回未付款</button>
-          </div>
-        </div>
-      `).join('');
     }
 
-    function updateGroupTotal(safeKey, subtotal) {
-      const ship = Number(document.getElementById(`shipping-${safeKey}`).value || 0);
-      const disc = Number(document.getElementById(`discount-${safeKey}`).value || 0);
-      const finalVal = Math.max(0, subtotal + ship - disc);
-      document.getElementById(`final-total-${safeKey}`).innerText = `$${finalVal}`;
+    function orderAmountTotal(orders) {
+      try { return formatMoney(subtotal(orders)); }
+      catch { return '請檢查訂單金額'; }
     }
 
-    async function toggleStockStatus(orderId, newOutOfStockState) {
-      const allOrders = await getAllOrdersDB();
-      const target = allOrders.find(o => o.id === orderId);
-      if (target) {
-        target.isOutOfStock = newOutOfStockState;
-        await saveOrderDB(target);
-        showToast(newOutOfStockState ? '已標記為斷貨 ($0)' : '已恢復商品計價');
+    function renderSettlementItem(order) {
+      const row = element('div', 'flex items-center gap-2.5 p-2 bg-slate-50 rounded-xl border border-slate-100 text-xs');
+      const details = element('div', 'flex-1 min-w-0');
+      details.append(
+        element('div', 'font-bold text-slate-800 truncate' + (order.isOutOfStock ? ' line-through' : ''), order.name),
+        element('div', 'text-[11px] text-slate-600', `規格：${order.spec || '預設'}（${order.date}）`)
+      );
+      const controls = element('div', 'text-right flex-shrink-0 space-y-1');
+      const buttons = element('div', 'flex justify-end gap-1');
+      buttons.append(
+        action(order.isOutOfStock ? '取消斷貨' : '斷貨',
+          'px-1.5 py-0.5 rounded text-[10px] font-bold ' +
+            (order.isOutOfStock ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-700'),
+          () => toggleStockStatus(order.id, !order.isOutOfStock)),
+        action('✏️ 編輯', 'px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700',
+          () => openEditModal(order.id))
+      );
+      controls.append(element('div', 'font-extrabold', orderAmount(order)), buttons);
+      row.append(thumbnail(order, 'w-11 h-11 object-cover rounded-lg border border-slate-200',
+        'w-11 h-11 rounded-lg bg-rose-50 grid place-items-center flex-shrink-0'), details, controls);
+      return row;
+    }
+
+    function settlementInput(labelText, value) {
+      const label = element('label', 'flex items-center gap-1 text-slate-600', labelText);
+      const input = element('input', 'w-20 p-1 border border-slate-200 rounded text-center font-bold bg-white');
+      input.type = 'number';
+      input.min = '0';
+      input.step = '0.01';
+      input.value = value;
+      label.append(input);
+      return { label, input };
+    }
+
+    function renderSettlementGroup(group) {
+      const card = element('section', 'bg-white rounded-2xl p-4 shadow-sm border border-rose-100 space-y-3');
+      const header = element('div', 'flex flex-wrap items-center gap-2 border-b border-slate-100 pb-2.5');
+      header.append(element('h3', 'text-sm font-extrabold text-slate-800', group.month || '日期待修正'),
+        element('span', 'text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white', group.channel),
+        element('span', 'ml-auto text-xs text-slate-600', `共 ${group.items.length} 件商品`));
+      const list = element('div', 'space-y-2');
+      for (const item of group.items) list.append(renderSettlementItem(item));
+
+      const draft = settlementDrafts.get(group.key) ?? { shipping: '0', discount: '0' };
+      const shipping = settlementInput('運費 (+)', draft.shipping);
+      const discount = settlementInput('折抵 (−)', draft.discount);
+      const fields = element('div', 'grid grid-cols-2 gap-2 text-xs');
+      fields.append(shipping.label, discount.label);
+      const footer = element('div', 'p-3 rounded-xl bg-rose-50 space-y-2');
+      const summary = element('div', 'flex justify-between items-center gap-2');
+      const amount = element('div', 'text-base font-extrabold text-coral-600');
+      const amountLabel = element('div', 'text-xs text-slate-600 font-bold', '應付總額');
+      amountLabel.append(amount);
+      const settle = action('一鍵全數結清 ✅', 'px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold',
+        async () => {
+          settle.disabled = true;
+          try {
+            await OrderStorage.settle(group.month, group.channel, Number(shipping.input.value), Number(discount.input.value), group.items);
+            settlementDrafts.delete(group.key);
+            showToast(`已結清 ${group.month} ${group.channel} 的團購帳款。`, '🎉');
+          } catch (err) {
+            showToast('無法結清：' + err.message, '⚠️');
+          }
+          renderSettlementTab();
+          renderHeaderStats();
+        });
+
+      function updateAmount() {
+        settlementDrafts.set(group.key, { shipping: shipping.input.value, discount: discount.input.value });
+        if (!group.month) {
+          amount.textContent = '請先修正喊單日期';
+          settle.disabled = true;
+          return;
+        }
+        try {
+          if (!shipping.input.validity.valid || !discount.input.validity.valid) throw new Error();
+          const total = settlementAmounts(subtotal(group.items), Number(shipping.input.value), Number(discount.input.value));
+          amount.textContent = formatMoney(total.total);
+          settle.disabled = false;
+        } catch {
+          amount.textContent = '請檢查金額';
+          settle.disabled = true;
+        }
+      }
+      shipping.input.addEventListener('input', updateAmount);
+      discount.input.addEventListener('input', updateAmount);
+      updateAmount();
+      summary.append(amountLabel, settle);
+      footer.append(fields, summary);
+      card.append(header, list, footer);
+      return card;
+    }
+
+    function renderSettlementRecord(batch) {
+      const card = element('div', 'p-3 bg-emerald-50 rounded-xl text-xs space-y-1 border border-emerald-100');
+      card.append(
+        element('div', 'font-bold text-slate-800', `${batch.month}・${batch.channel}・${batch.date} 結清`),
+        element('div', 'text-slate-600', `商品 ${formatMoney(batch.subtotal)} ＋ 運費 ${formatMoney(batch.shipping)} − 折抵 ${formatMoney(batch.discount)}`),
+        element('div', 'font-extrabold text-emerald-800', `當時實付 ${formatMoney(batch.total)}（${batch.orderIds.length} 筆）`)
+      );
+      if (batch.returnedOrderIds.length) card.append(element('div', 'text-amber-800',
+        `已退回未付款 ${batch.returnedOrderIds.length} 筆`));
+      return card;
+    }
+
+    function renderPaidOrder(order) {
+      const row = element('div', 'flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 rounded-xl text-xs border border-slate-100');
+      const info = element('div', 'flex items-center gap-2 min-w-0');
+      const details = element('div', 'min-w-0');
+      details.append(element('div', 'font-bold text-slate-700 truncate', order.name),
+        element('div', 'text-[10px] text-slate-600', `${order.channel} | ${order.date}`));
+      info.append(thumbnail(order, 'w-8 h-8 rounded object-cover',
+        'w-8 h-8 rounded bg-slate-100 grid place-items-center flex-shrink-0'), details);
+      const controls = element('div', 'flex items-center gap-2');
+      controls.append(element('span', 'font-extrabold text-slate-700', orderAmount(order)),
+        action('編輯', 'text-[10px] font-bold text-indigo-600', () => openEditModal(order.id)),
+        action('退回未付款', 'text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 font-bold',
+          () => unsettleOrder(order.id)));
+      row.append(info, controls);
+      return row;
+    }
+
+    async function toggleStockStatus(id, isOutOfStock) {
+      try {
+        await OrderStorage.setStockStatus(id, isOutOfStock);
+        showToast(isOutOfStock ? '已標記為斷貨 ($0)' : '已恢復商品計價');
         renderSettlementTab();
         renderHeaderStats();
+      } catch (err) {
+        showToast('無法更新斷貨狀態：' + err.message, '⚠️');
       }
     }
 
-    async function settleGroup(groupKey, safeKey) {
-      const allOrders = await getAllOrdersDB();
-      const [ym, channel] = groupKey.split('___');
-
-      const todayStr = new Date().toISOString().split('T')[0];
-
-      const updated = allOrders.map(raw => {
-        const o = normalizeOrder(raw);
-        const itemYm = o.date ? o.date.substring(0, 7) : '';
-        if (!o.isPaid && itemYm === ym && o.channel === channel) {
-          return {
-            ...o,
-            isPaid: true,
-            settlementDate: todayStr
-          };
-        }
-        return o;
-      });
-
-      await bulkSaveOrdersDB(updated);
-      showToast(`已全數結清 [${channel}] ${ym} 的團購帳款！`, '🎉');
-      renderSettlementTab();
-      renderHeaderStats();
-    }
-
-    async function unsettleOrder(orderId) {
-      const allOrders = await getAllOrdersDB();
-      const target = allOrders.find(o => o.id === orderId);
-      if (target) {
-        target.isPaid = false;
-        target.settlementDate = null;
-        await saveOrderDB(target);
+    async function unsettleOrder(id) {
+      try {
+        await OrderStorage.returnToUnpaid(id);
         showToast('已退回至未付款明細');
         renderSettlementTab();
         renderHeaderStats();
+      } catch (err) {
+        showToast('無法退回訂單：' + err.message, '⚠️');
       }
     }
 
@@ -1603,81 +1992,85 @@
     /* ==========================================================================
        13. TAB 4: SETTINGS, BACKUP & RESTORE
        ========================================================================== */
+    let sessionGeminiKey = '';
+
+    function getGeminiKey() {
+      return sessionGeminiKey || localStorage.getItem('dib_gemini_key') || '';
+    }
+
     function loadGeminiStatus() {
-      const key = localStorage.getItem('dib_gemini_key') || '';
-      const statusEl = document.getElementById('gemini-status');
-      if (key) {
-        statusEl.innerHTML = `<span class="text-emerald-600 font-bold">已設定 (Key: ${key.substr(0, 6)}...${key.substr(-4)})</span>`;
-        document.getElementById('gemini-key-input').value = key;
-      } else {
-        statusEl.innerHTML = `<span class="text-slate-400">未設定 API Key</span>`;
-      }
+      const saved = Boolean(localStorage.getItem('dib_gemini_key'));
+      document.getElementById('gemini-remember-key').checked = saved;
+      document.getElementById('gemini-key-input').value = '';
+      document.getElementById('gemini-status').textContent = saved ? '已設定，儲存在此瀏覽器'
+        : sessionGeminiKey ? '已設定，關閉或重新載入頁面後清除' : '未設定 API Key';
     }
 
     function saveGeminiKey() {
-      const val = document.getElementById('gemini-key-input').value.trim();
-      if (val) {
-        localStorage.setItem('dib_gemini_key', val);
-        showToast('Gemini API Key 儲存成功！');
-      } else {
-        localStorage.removeItem('dib_gemini_key');
-        showToast('已清除 Gemini Key');
+      const value = document.getElementById('gemini-key-input').value.trim() || getGeminiKey();
+      if (!value) {
+        showToast('請輸入 Gemini API Key。', '⚠️');
+        return;
       }
+      const remember = document.getElementById('gemini-remember-key').checked;
+      if (remember) localStorage.setItem('dib_gemini_key', value);
+      else localStorage.removeItem('dib_gemini_key');
+      sessionGeminiKey = remember ? '' : value;
       loadGeminiStatus();
+      showToast('Gemini API Key 設定成功！');
     }
 
     function clearGeminiKey() {
+      sessionGeminiKey = '';
       localStorage.removeItem('dib_gemini_key');
-      document.getElementById('gemini-key-input').value = '';
       loadGeminiStatus();
       showToast('已清除 Gemini API Key');
     }
 
     function renderSettingsChannels() {
-      const container = document.getElementById('settings-channels-list');
-      container.innerHTML = channels.map((c, idx) => `
-        <div class="flex items-center gap-1 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">
-          <span>${c}</span>
-          <button onclick="removeChannel(${idx})" class="text-slate-400 hover:text-rose-500 ml-1">✕</button>
-        </div>
-      `).join('');
+      document.getElementById('settings-channels-list').replaceChildren(...channels.map(channel => {
+        const label = element('div', 'flex items-center gap-1 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold border border-slate-200');
+        const button = action('✕', 'text-slate-600 hover:text-rose-600 ml-1', () => removeChannel(channel));
+        button.setAttribute('aria-label', '移除渠道：' + channel);
+        label.append(element('span', '', channel), button);
+        return label;
+      }));
     }
 
-    function addNewChannel() {
+    async function addNewChannel() {
       const input = document.getElementById('new-channel-name');
-      const val = input.value.trim();
-      if (!val) return;
-      if (channels.includes(val)) {
+      const value = input.value.trim();
+      if (!value) return;
+      if (channels.includes(value)) {
         showToast('此渠道已存在！', '⚠️');
         return;
       }
-      channels.push(val);
-      saveChannels();
-      input.value = '';
-      showToast(`已新增購買渠道「${val}」`);
+      if (await changeChannels(current => [...new Set([...current, value])], `已新增購買渠道「${value}」`)) {
+        input.value = '';
+      }
     }
 
-    function removeChannel(idx) {
-      const removed = channels.splice(idx, 1);
-      saveChannels();
-      showToast(`已移除購買渠道「${removed[0]}」`);
+    function removeChannel(channel) {
+      return changeChannels(current => current.filter(value => value !== channel), `已移除購買渠道「${channel}」`);
     }
 
     /* Backup Export */
     async function exportBackupJSON() {
-      const orders = await getAllOrdersDB();
-      const backupData = {
-        version: '2.5.0',
-        exportDate: new Date().toISOString(),
-        channels: channels,
-        orders: orders
-      };
+      let data;
+      try {
+        data = await OrderStorage.readBackup(channels);
+      } catch (err) {
+        showToast('備份匯出失敗：' + err.message, '⚠️');
+        return;
+      }
+      const { orders } = data;
+      const backupData = { version: '3.0.0', exportDate: new Date().toISOString(), ...data };
 
       const jsonStr = JSON.stringify(backupData, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      const dateStr = new Date().toISOString().split('T')[0];
+      const dateStr = today();
       a.href = url;
       a.download = `did-i-buy-this-backup-${dateStr}.json`;
       document.body.appendChild(a);
@@ -1698,10 +2091,14 @@
           const content = e.target.result;
           await processImportContent(content);
         } catch (err) {
-          showToast('匯入失敗: 無法解析備份檔 (' + err.message + ')', '❌');
+          showToast('匯入失敗：' + err.message, '❌');
         } finally {
           event.target.value = ''; // Reset input element
         }
+      };
+      reader.onerror = () => {
+        showToast('無法讀取備份檔。', '❌');
+        event.target.value = '';
       };
       reader.readAsText(file);
     }
@@ -1713,49 +2110,44 @@
         return;
       }
       try {
-        await processImportContent(content);
-        document.getElementById('import-text-area').value = '';
+        if (await processImportContent(content)) {
+          document.getElementById('import-text-area').value = '';
+        }
       } catch (err) {
         showToast('文字還原失敗: ' + err.message, '❌');
       }
     }
 
     async function processImportContent(jsonString) {
-      const parsed = JSON.parse(jsonString);
-      let rawOrders = [];
-
-      if (Array.isArray(parsed)) {
-        rawOrders = parsed;
-      } else if (parsed.orders && Array.isArray(parsed.orders)) {
-        rawOrders = parsed.orders;
-        if (parsed.channels && Array.isArray(parsed.channels)) {
-          channels = Array.from(new Set([...channels, ...parsed.channels]));
-          saveChannels();
-        }
+      const data = parseBackup(jsonString);
+      if (!data.orders.length && !data.settlements.length && !data.channels.length) {
+        showToast('備份檔中沒有可還原的資料。', '⚠️');
+        return false;
       }
 
-      if (rawOrders.length === 0) {
-        showToast('備份檔中未發現任何訂單紀錄', '⚠️');
-        return;
-      }
+      const overwritten = await OrderStorage.findBackupConflicts(data);
+      if (overwritten && !confirm(`有 ${overwritten} 筆相同 ID 的本機資料。要用備份覆蓋這些資料嗎？`)) return false;
 
-      // Normalize every imported order to guarantee photo & category preservation
-      const normalizedList = rawOrders.map(normalizeOrder);
-      await bulkSaveOrdersDB(normalizedList);
-
-      const photoCount = normalizedList.filter(o => o.image).length;
-      showToast(`成功還原 ${normalizedList.length} 筆訂單 (包含 ${photoCount} 張商品照片)！`, '🎉');
-
+      channels = await OrderStorage.writeBackup(data, channels, overwritten);
+      refreshChannels();
+      showToast(`已還原 ${data.orders.length} 筆訂單、${data.settlements.length} 筆月結紀錄。`, '🎉');
       renderHeaderStats();
       if (currentTab === 'search') renderSearchTab();
       if (currentTab === 'settlement') renderSettlementTab();
+      return true;
     }
 
     async function clearAllData() {
-      if (confirm('⚠️ 警告：確定要清空本機所有團購訂單嗎？')) {
+      if (confirm('⚠️ 警告：確定要清空本機所有訂單與月結紀錄嗎？')) {
         if (confirm('🚨 再次確認：清空後將無法復原，請確保您已匯出備份！')) {
-          await clearOrdersDB();
-          showToast('已清空本機所有訂單資料');
+          try {
+            await clearOrdersDB();
+          } catch (err) {
+            showToast('清空失敗：' + err.message, '⚠️');
+            return;
+          }
+          settlementDrafts.clear();
+          showToast('已清空本機訂單與月結紀錄');
           renderHeaderStats();
           if (currentTab === 'search') renderSearchTab();
           if (currentTab === 'settlement') renderSettlementTab();
@@ -1767,7 +2159,7 @@
        14. GEMINI AI VISION INTEGRATION
        ========================================================================== */
     async function triggerGeminiAI(target) {
-      const apiKey = localStorage.getItem('dib_gemini_key') || '';
+      const apiKey = getGeminiKey();
       if (!apiKey) {
         showToast('請先至「設定」頁面填寫 Gemini API Key！', '⚠️');
         switchTab('settings');
@@ -1781,14 +2173,16 @@
       }
 
       const btn = document.getElementById(`ai-btn-${target}`);
-      const oldHtml = btn ? btn.innerHTML : '';
+      const oldContent = btn ? [...btn.childNodes] : [];
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = `✨ 辨識中...`;
+        btn.textContent = '✨ 辨識中…';
       }
 
       try {
-        const base64Data = imgB64.split(',')[1] || imgB64;
+        const imageMatch = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(imgB64);
+        if (!imageMatch) throw new Error('請重新選擇本機商品圖片。');
+        const [, mimeType, base64Data] = imageMatch;
         const promptText = `你是一個團購訂單辨識助手。請分析這張商品圖片或截圖，擷取以下JSON結構:
 {
   "name": "商品名稱 (去除開頭淨化編號如 1589J* 或 貳六_11團)",
@@ -1800,38 +2194,52 @@
 }
 只返回純 JSON，不要 Markdown 標記或其他文字。`;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const request = {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
           body: JSON.stringify({
             contents: [{
               parts: [
                 { text: promptText },
-                { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+                { inline_data: { mime_type: mimeType, data: base64Data } }
               ]
             }]
           })
-        });
-
+        };
+        const generate = model => fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, request
+        );
+        let response = await generate('gemini-2.5-flash');
+        if (response.status === 404) response = await generate('gemini-3.1-flash-lite');
+        if (!response.ok) throw new Error(`Gemini 回傳 HTTP ${response.status}`);
         const data = await response.json();
         const textRes = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const cleanJson = textRes.replace(/```json/g, '').replace(/```/g, '').trim();
         const result = JSON.parse(cleanJson);
 
-        if (target === 'add') {
-          if (result.name) {
+        if (!result || typeof result !== 'object' || Array.isArray(result)) {
+          throw new Error('無法讀取辨識結果。');
+        }
+        if (target === 'add' && addFormState.image === imgB64) {
+          if (typeof result.name === 'string' && result.name.trim()) {
             document.getElementById('add-name-input').value = result.name;
             addFormState.name = result.name;
           }
-          if (result.spec) document.getElementById('add-spec-input').value = result.spec;
-          if (result.unitPrice) document.getElementById('add-price-input').value = result.unitPrice;
-          if (result.qty) document.getElementById('add-qty-input').value = result.qty;
-          if (result.mainCategory && CATEGORIES[result.mainCategory]) {
+          if (typeof result.spec === 'string') document.getElementById('add-spec-input').value = result.spec;
+          if (typeof result.unitPrice === 'number' && Number.isFinite(result.unitPrice) && result.unitPrice >= 0) {
+            document.getElementById('add-price-input').value = result.unitPrice;
+          }
+          if (Number.isSafeInteger(result.qty) && result.qty > 0) document.getElementById('add-qty-input').value = result.qty;
+          if (!addFormState.isUserCategoryTouched && Object.hasOwn(CATEGORIES, result.mainCategory)) {
             document.getElementById('add-main-cat').value = result.mainCategory;
             onMainCatChange('add', result.mainCategory);
-            if (result.subCategory) document.getElementById('add-sub-cat').value = result.subCategory;
+            if (CATEGORIES[result.mainCategory].includes(result.subCategory)) {
+              document.getElementById('add-sub-cat').value = result.subCategory;
+            }
           }
           checkDuplicateWarning();
+        } else {
+          return;
         }
 
         showToast('✨ AI 成功自動填入商品資訊！', '🎉');
@@ -1841,7 +2249,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = oldHtml;
+          btn.replaceChildren(...oldContent);
         }
       }
     }
