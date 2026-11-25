@@ -219,6 +219,12 @@
           <input type="date" id="add-date-input" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400">
         </div>
 
+        <div>
+          <label for="add-note-input" class="text-xs font-bold text-slate-600 block mb-1">備註（選填）</label>
+          <textarea id="add-note-input" rows="2" placeholder="例：到貨後與另一筆一起寄"
+            class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400"></textarea>
+        </div>
+
         <!-- Submit Buttons -->
         <div class="grid grid-cols-2 gap-2 pt-2">
           <button type="button" onclick="submitAddOrder(false)" class="w-full py-3 bg-gradient-to-r from-coral-500 to-rose-500 text-white rounded-xl text-sm font-bold shadow-md hover:opacity-95 active:scale-[0.99] transition">
@@ -240,7 +246,7 @@
         </h2>
         
         <!-- Keyword Search Bar -->
-        <input type="text" id="search-keyword" placeholder="搜尋品項名稱、規格、購買渠道..." 
+        <input type="text" id="search-keyword" placeholder="搜尋品項、規格、渠道或備註…" 
                class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-coral-400 bg-slate-50/50"
                oninput="scheduleSearch()">
 
@@ -249,8 +255,8 @@
           <select id="filter-channel" onchange="renderSearchTab()" class="text-xs border border-slate-200 rounded-xl px-2 py-2 bg-white outline-none">
             <option value="ALL">所有購買渠道</option>
           </select>
-          <select id="filter-category" onchange="renderSearchTab()" class="text-xs border border-slate-200 rounded-xl px-2 py-2 bg-white outline-none">
-            <option value="ALL">所有分類</option>
+          <select id="filter-category" aria-label="篩選小分類" onchange="renderSearchTab()" class="text-xs border border-slate-200 rounded-xl px-2 py-2 bg-white outline-none">
+            <option value="">所有小分類</option>
           </select>
         </div>
 
@@ -349,12 +355,53 @@
         </div>
       </div>
 
+      <section class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100/80 space-y-4" aria-labelledby="category-settings-title">
+        <div>
+          <h2 id="category-settings-title" class="text-sm font-bold text-slate-800">自訂分類</h2>
+          <p class="mt-1 text-xs text-slate-600">重新命名會同步更新既有訂單。移除只會從選單隱藏，既有訂單仍保留原分類。</p>
+        </div>
+        <form class="flex items-end gap-2" onsubmit="event.preventDefault(); manageCategory('add-main')">
+          <label class="flex-1 min-w-0 text-xs font-bold text-slate-600">新增大分類
+            <input id="category-new-main" required class="mt-1 w-full text-sm border border-slate-200 rounded-xl px-3 py-2" placeholder="例：寵物">
+          </label>
+          <button type="submit" class="px-3 py-2 rounded-xl bg-coral-500 text-white text-xs font-bold">新增</button>
+        </form>
+        <div id="category-settings-groups" class="space-y-3 border-t border-slate-100 pt-3">
+          <label for="category-manage-main" class="block text-xs font-bold text-slate-600">管理大分類</label>
+          <select id="category-manage-main" onchange="renderCategorySettings(this.value)" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white"></select>
+          <form class="flex items-end flex-wrap gap-2" onsubmit="event.preventDefault(); manageCategory('rename-main')">
+            <label class="min-w-28 flex-1 text-xs text-slate-600">大分類名稱
+              <input id="category-rename-main" required class="mt-1 w-full text-sm border border-slate-200 rounded-xl px-3 py-2">
+            </label>
+            <button type="submit" class="px-3 py-2 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold">重新命名</button>
+            <button type="button" onclick="manageCategory('remove-main')" class="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold">移除大分類</button>
+          </form>
+          <form class="flex items-end gap-2 pt-2" onsubmit="event.preventDefault(); manageCategory('add-sub')">
+            <label class="flex-1 min-w-0 text-xs font-bold text-slate-600">新增小分類
+              <input id="category-new-sub" required class="mt-1 w-full text-sm border border-slate-200 rounded-xl px-3 py-2" placeholder="例：玩具">
+            </label>
+            <button type="submit" class="px-3 py-2 rounded-xl bg-coral-500 text-white text-xs font-bold">新增</button>
+          </form>
+          <div id="category-settings-subs" class="space-y-2">
+            <label for="category-manage-sub" class="block text-xs font-bold text-slate-600">管理小分類</label>
+            <select id="category-manage-sub" onchange="updateCategorySubName()" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white"></select>
+            <form class="flex items-end flex-wrap gap-2" onsubmit="event.preventDefault(); manageCategory('rename-sub')">
+              <label class="min-w-28 flex-1 text-xs text-slate-600">小分類名稱
+                <input id="category-rename-sub" required class="mt-1 w-full text-sm border border-slate-200 rounded-xl px-3 py-2">
+              </label>
+              <button type="submit" class="px-3 py-2 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold">重新命名</button>
+              <button type="button" onclick="manageCategory('remove-sub')" class="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold">移除小分類</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
       <!-- Backup & Restore -->
       <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100/80 space-y-3">
         <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
           <span>💾</span> 資料備份與還原 (IndexedDB)
         </h2>
-        <p class="text-xs text-slate-500">完整包含商品圖片 Base64 與自訂購買渠道，完美支援 iOS Safari 轉移。</p>
+        <p class="text-xs text-slate-500">備份包含訂單、備註、商品圖片、月結紀錄、購買渠道與自訂分類。</p>
 
         <div class="grid grid-cols-2 gap-2 pt-1">
           <button onclick="exportBackupJSON()" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1">
@@ -475,8 +522,9 @@
 
         <!-- Edit Notes -->
         <div>
-          <label class="text-xs font-bold text-slate-600 block mb-1">備註</label>
-          <input type="text" id="edit-note-input" placeholder="選填備註..." class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none">
+          <label for="edit-note-input" class="text-xs font-bold text-slate-600 block mb-1">備註</label>
+          <textarea id="edit-note-input" rows="2" placeholder="選填備註"
+            class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none"></textarea>
         </div>
       </div>
 
@@ -544,6 +592,62 @@
         '自用': ['上衣', '褲子', '裙子', '洋裝', '外套', '鞋包配件', '美妝保養', '美食零食', '生活小物', '其他'],
         '家用': ['食品生鮮', '日用清潔', '廚房餐具', '收納居家', '常備藥品', '其他']
       };
+      const DEFAULT_CATEGORIES = Object.entries(CATEGORIES).map(([name, subcategories]) => ({ name, subcategories }));
+
+      function categoryName(value) {
+        if (typeof value !== 'string' || !value.trim()) throw new Error('請輸入分類名稱');
+        return value.trim();
+      }
+
+      function normalizeCategoryCatalog(raw) {
+        if (!Array.isArray(raw)) throw new Error('自訂分類清單格式錯誤');
+        const names = new Set();
+        return raw.map(group => {
+          if (!group || !Array.isArray(group.subcategories)) throw new Error('小分類清單格式錯誤');
+          const name = categoryName(group.name);
+          if (names.has(name)) throw new Error(`備份中有重複的大分類「${name}」`);
+          names.add(name);
+          return { name, subcategories: [...new Set(group.subcategories.map(categoryName))] };
+        });
+      }
+
+      function mergeCategoryCatalog(local, imported) {
+        const groups = new Map(local.map(group => [group.name, group]));
+        for (const group of imported) {
+          const existing = groups.get(group.name);
+          groups.set(group.name, existing ? {
+            name: group.name, subcategories: [...new Set([...existing.subcategories, ...group.subcategories])]
+          } : group);
+        }
+        return [...groups.values()];
+      }
+
+      function changeCategoryCatalog(catalog, command) {
+        const { operation, main, sub } = command;
+        const isMain = sub === undefined;
+        const name = operation === 'remove' ? '' : categoryName(command.name);
+        const group = catalog.find(entry => entry.name === main);
+
+        if (operation === 'add' && !main) {
+          if (catalog.some(entry => entry.name === name)) throw new Error('這個大分類已存在');
+          return [...catalog, { name, subcategories: [] }];
+        }
+        if (!group) throw new Error('找不到這個大分類，請重新選擇');
+        if (isMain && operation === 'remove') return catalog.filter(entry => entry !== group);
+        if (isMain) {
+          if (name !== main && catalog.some(entry => entry.name === name)) throw new Error('這個大分類已存在');
+          return catalog.map(entry => entry === group ? { ...entry, name } : entry);
+        }
+
+        const values = group.subcategories;
+        if (operation !== 'add' && !values.includes(sub)) throw new Error('找不到這個小分類，請重新選擇');
+        if (operation !== 'remove' && name !== sub && values.includes(name)) throw new Error('這個大分類已有同名的小分類');
+        const subcategories = operation === 'add' ? [...values, name]
+          : operation === 'remove' ? values.filter(value => value !== sub)
+          : values.map(value => value === sub ? name : value);
+        return catalog.map(entry => entry === group ? { ...group, subcategories } : entry);
+      }
+
       const keyToken = key => JSON.stringify(key);
 
       function today(date = new Date()) {
@@ -713,6 +817,7 @@
         if (!data || !Array.isArray(data.orders)) throw new Error('找不到訂單清單');
         const channels = data.channels ?? [];
         const settlements = data.settlements ?? [];
+        const categories = Object.hasOwn(data, 'categories') ? normalizeCategoryCatalog(data.categories) : null;
         if (!Array.isArray(channels) || !channels.every(value => typeof value === 'string' && value.trim())) {
           throw new Error('渠道清單格式錯誤');
         }
@@ -746,16 +851,18 @@
             throw new Error('訂單與月結紀錄關聯不一致');
           }
         }
-        return { orders, settlements: batches, channels: [...new Set(channels.map(value => value.trim()))] };
+        return { orders, settlements: batches, channels: [...new Set(channels.map(value => value.trim()))], categories };
       }
 
-      return { CATEGORIES, today, monthsAgo, isDay, orderId, keyToken, safeImage, normalizeOrder,
+      return { DEFAULT_CATEGORIES, categoryName, changeCategoryCatalog, mergeCategoryCatalog,
+        today, monthsAgo, isDay, orderId, keyToken, safeImage, normalizeOrder,
         validateOrder, parseBackup, subtotal, settlementAmounts };
     })();
   </script>
   <script>
     const OrderStorage = (() => {
-      const { normalizeOrder, orderId, keyToken, today, subtotal, settlementAmounts } = OrderRules;
+      const { normalizeOrder, orderId, keyToken, today, subtotal, settlementAmounts, DEFAULT_CATEGORIES,
+        changeCategoryCatalog, mergeCategoryCatalog } = OrderRules;
       let db;
       const orderStores = ['orders', 'orderSummaries'];
       const historyStores = [...orderStores, 'settlements'];
@@ -854,7 +961,7 @@
         }
       }
 
-      function updateOrder(order) {
+      function updateOrder(order, keepCategory) {
         return write(historyStores, async (orders, summaries, settlements) => {
           const current = await read(orders.get(order.id));
           if (!current) throw new Error('找不到這筆訂單');
@@ -862,6 +969,8 @@
           if (previous.isPaid && !order.isPaid) await markReturned(settlements, previous);
           putOrder(orders, summaries, {
             ...order,
+            mainCategory: keepCategory ? previous.mainCategory : order.mainCategory,
+            subCategory: keepCategory ? previous.subCategory : order.subCategory,
             settlementId: order.isPaid ? previous.settlementId : null,
             settlementDate: order.isPaid ? (previous.settlementDate || today()) : null
           });
@@ -943,14 +1052,47 @@
         });
       }
 
+      async function loadCategories() {
+        const saved = await read(db.transaction('settings').objectStore('settings').get('categories'));
+        return saved ?? DEFAULT_CATEGORIES;
+      }
+
+      function saveCategories(command) {
+        const rename = command.operation === 'rename' && command.name !== (command.sub ?? command.main);
+        if (!rename) {
+          return write(['settings'], async settings => {
+            const catalog = changeCategoryCatalog(await read(settings.get('categories')) ?? DEFAULT_CATEGORIES, command);
+            settings.put(catalog, 'categories');
+            return catalog;
+          });
+        }
+        return write([...orderStores, 'settings'], async (orders, summaries, settings) => {
+          const [saved, all] = await Promise.all([read(settings.get('categories')), read(summaries.getAll())]);
+          const catalog = changeCategoryCatalog(saved ?? DEFAULT_CATEGORIES, command);
+          const targets = all.filter(order => order.mainCategory === command.main &&
+            (command.sub === undefined || order.subCategory === command.sub));
+          const affected = await Promise.all(targets.map(order => read(orders.get(order.id))));
+          for (const original of affected) {
+            putOrder(orders, summaries, {
+              ...original,
+              mainCategory: command.sub === undefined ? command.name : command.main,
+              subCategory: command.sub === undefined ? normalizeOrder(original).subCategory : command.name
+            });
+          }
+          settings.put(catalog, 'categories');
+          return catalog;
+        });
+      }
+
       function readBackup(fallback) {
         const tx = db.transaction(['orders', 'settlements', 'settings'], 'readonly');
         return Promise.all([
           read(tx.objectStore('orders').getAll()),
           read(tx.objectStore('settlements').getAll()),
-          read(tx.objectStore('settings').get('channels'))
-        ]).then(([orders, settlements, channels]) => ({
-          orders, settlements, channels: channels ?? fallback
+          read(tx.objectStore('settings').get('channels')),
+          read(tx.objectStore('settings').get('categories'))
+        ]).then(([orders, settlements, channels, categories]) => ({
+          orders, settlements, channels: channels ?? fallback, categories: categories ?? DEFAULT_CATEGORIES
         }));
       }
 
@@ -967,8 +1109,9 @@
 
       function writeBackup(data, fallback, confirmedConflicts) {
         return write([...historyStores, 'settings'], async (orders, summaries, settlements, settings) => {
-          const [saved, prior, existingBatches] = await Promise.all([
+          const [saved, savedCategories, prior, existingBatches] = await Promise.all([
             read(settings.get('channels')),
+            read(settings.get('categories')),
             Promise.all(data.orders.map(order => read(orders.get(order.id)))),
             Promise.all(data.settlements.map(batch => read(settlements.getKey(batch.id))))
           ]);
@@ -981,13 +1124,17 @@
             if (old?.settlementId && old.settlementId !== order.settlementId) await markReturned(settlements, old);
             putOrder(orders, summaries, order);
           }
+          const categories = data.categories === null ? (savedCategories ?? DEFAULT_CATEGORIES)
+            : mergeCategoryCatalog(savedCategories ?? [], data.categories);
           settings.put(channels, 'channels');
-          return channels;
+          if (data.categories !== null) settings.put(categories, 'categories');
+          return { channels, categories };
         });
       }
 
       return { initDB, getOrder, getSummaries, saveOrder, updateOrder, returnToUnpaid, setStockStatus, deleteOrder,
-        clearOrders, getSettlements, settle, loadChannels, saveChannels, readBackup, findBackupConflicts, writeBackup };
+        clearOrders, getSettlements, settle, loadChannels, saveChannels, loadCategories, saveCategories,
+        readBackup, findBackupConflicts, writeBackup };
     })();
   </script>
   <script>
@@ -1011,7 +1158,7 @@
     /* ==========================================================================
        2. GLOBAL STATE
        ========================================================================== */
-    const { CATEGORIES, today, monthsAgo, isDay, normalizeOrder, validateOrder, parseBackup,
+    const { DEFAULT_CATEGORIES, categoryName, today, monthsAgo, isDay, normalizeOrder, validateOrder, parseBackup,
       subtotal, settlementAmounts, safeImage, orderId, keyToken } = OrderRules;
     const { initDB, getOrder: getOrderDB, saveOrder: saveOrderDB,
       deleteOrder: deleteOrderDB, clearOrders: clearOrdersDB } = OrderStorage;
@@ -1027,6 +1174,8 @@
     const settlementDrafts = new Map();
     let currentTab = 'add';
     let channels = [];
+    let categories = DEFAULT_CATEGORIES;
+    let updatingCategories = false;
     let dupWindowMonths = 3;
     let searchDateFilterType = '3M';
     let editingOrderId = null;
@@ -1049,7 +1198,8 @@
       try {
         await initDB();
         await loadChannels();
-        initCategoryDropdowns();
+        categories = await OrderStorage.loadCategories();
+        refreshCategoryDropdowns();
         resetAddFormDate();
         renderHeaderStats();
         renderAddChannelPills();
@@ -1127,7 +1277,10 @@
       // Refresh data on tab activation
       if (tabId === 'search') renderSearchTab();
       if (tabId === 'settlement') renderSettlementTab();
-      if (tabId === 'settings') renderSettingsChannels();
+      if (tabId === 'settings') {
+        renderSettingsChannels();
+        renderCategorySettings();
+      }
       renderHeaderStats();
     }
 
@@ -1225,34 +1378,97 @@
     /* ==========================================================================
        6. CATEGORIES & AUTO-CLASSIFICATION SYSTEM
        ========================================================================== */
-    function initCategoryDropdowns() {
-      const addMain = document.getElementById('add-main-cat');
-      const editMain = document.getElementById('edit-main-cat');
-      const mainKeys = Object.keys(CATEGORIES);
-
-      fillOptions(addMain, mainKeys);
-      fillOptions(editMain, mainKeys);
-
-      onMainCatChange('add', mainKeys[0]);
-      onMainCatChange('edit', mainKeys[0]);
+    function categorySubgroups(name) {
+      return categories.find(group => group.name === name)?.subcategories ?? [];
     }
 
-    function onMainCatChange(target, mainCat) {
-      const subSelect = document.getElementById(`${target}-sub-cat`);
-      const subList = Object.hasOwn(CATEGORIES, mainCat) ? CATEGORIES[mainCat] : ['其他'];
-      fillOptions(subSelect, subList);
+    function onMainCatChange(target, main, preferredSub) {
+      const select = document.getElementById(`${target}-sub-cat`);
+      const subs = categorySubgroups(main);
+      const historicalSub = target === 'edit' && main === editFormState.mainCategory ? editFormState.subCategory : '';
+      const available = historicalSub ? [...new Set([...subs, historicalSub])] : subs;
+      fillOptions(select, available, available.length ? undefined : '請先在設定新增小分類');
+      select.value = available.includes(preferredSub) ? preferredSub : (available[0] ?? '');
+    }
 
+    function fillCategoryDropdowns(target, preferredMain, preferredSub) {
+      const select = document.getElementById(`${target}-main-cat`);
+      const available = categories.map(group => group.name);
+      if (target === 'edit' && editFormState.mainCategory && !available.includes(editFormState.mainCategory)) {
+        available.push(editFormState.mainCategory);
+      }
+      fillOptions(select, available, available.length ? undefined : '請先在設定新增大分類');
+      const firstUsable = categories.find(group => group.subcategories.length)?.name;
+      const main = available.includes(preferredMain) ? preferredMain : (firstUsable ?? available[0] ?? '');
+      select.value = main;
+      onMainCatChange(target, main, preferredSub);
+    }
+
+    function refreshCategoryDropdowns(rename) {
+      const main = document.getElementById('add-main-cat').value;
+      const sub = document.getElementById('add-sub-cat').value;
+      const applies = rename?.operation === 'rename' && main === rename.main;
+      fillCategoryDropdowns('add',
+        applies && rename.sub === undefined ? rename.name : main,
+        applies && rename.sub === sub ? rename.name : sub);
+    }
+
+    function selectAddCategory(main, sub) {
+      document.getElementById('add-main-cat').value = main;
+      onMainCatChange('add', main, sub);
     }
 
     function autoClassifyCategory(nameText) {
-      if (!nameText) return;
-      for (const rule of AUTO_CAT_KEYWORDS) {
-        if (rule.kw.some(k => nameText.includes(k))) {
-          document.getElementById('add-main-cat').value = rule.main;
-          onMainCatChange('add', rule.main);
-          document.getElementById('add-sub-cat').value = rule.sub;
-          break;
-        }
+      const rule = AUTO_CAT_KEYWORDS.find(({ kw, main, sub }) =>
+        kw.some(keyword => nameText.includes(keyword)) && categorySubgroups(main).includes(sub));
+      if (rule) selectAddCategory(rule.main, rule.sub);
+    }
+
+    function renderCategorySettings(preferredMain, preferredSub) {
+      const mainSelect = document.getElementById('category-manage-main');
+      const subSelect = document.getElementById('category-manage-sub');
+      const mainNames = categories.map(group => group.name);
+      const previousMain = preferredMain ?? mainSelect.value;
+      const previousSub = preferredSub ?? (previousMain === mainSelect.value ? subSelect.value : '');
+      const main = mainNames.includes(previousMain) ? previousMain : (mainNames[0] ?? '');
+      const subs = categorySubgroups(main);
+      fillOptions(mainSelect, mainNames);
+      fillOptions(subSelect, subs);
+      mainSelect.value = main;
+      subSelect.value = subs.includes(previousSub) ? previousSub : (subs[0] ?? '');
+      document.getElementById('category-rename-main').value = main;
+      updateCategorySubName();
+      document.getElementById('category-settings-groups').classList.toggle('hidden', !mainNames.length);
+      document.getElementById('category-settings-subs').classList.toggle('hidden', !subs.length);
+    }
+
+    function updateCategorySubName() {
+      document.getElementById('category-rename-sub').value = document.getElementById('category-manage-sub').value;
+    }
+
+    async function manageCategory(action) {
+      if (updatingCategories) return;
+      const [operation, level] = action.split('-');
+      const main = document.getElementById('category-manage-main').value;
+      const sub = document.getElementById('category-manage-sub').value;
+      const command = { operation, main: operation === 'add' && level === 'main' ? undefined : main };
+      if (level === 'sub') command.sub = operation === 'add' ? '' : sub;
+      const field = operation === 'remove' ? null : document.getElementById(
+        `category-${operation === 'add' ? 'new' : 'rename'}-${level}`
+      );
+      updatingCategories = true;
+      try {
+        if (field) command.name = categoryName(field.value);
+        categories = await OrderStorage.saveCategories(command);
+        refreshCategoryDropdowns(command);
+        renderCategorySettings(level === 'main' && field ? command.name : main,
+          level === 'sub' && field ? command.name : sub);
+        if (operation === 'add') field.value = '';
+        showToast('分類已更新。');
+      } catch (err) {
+        showToast('無法更新分類：' + err.message, '⚠️');
+      } finally {
+        updatingCategories = false;
       }
     }
 
@@ -1504,6 +1720,11 @@
       const qty = Number(document.getElementById('add-qty-input').value || 1);
       const mainCat = document.getElementById('add-main-cat').value;
       const subCat = document.getElementById('add-sub-cat').value;
+      if (!categorySubgroups(mainCat).includes(subCat)) {
+        showToast('請選擇大分類與小分類，可在設定中新增。', '⚠️');
+        return;
+      }
+      const noteInput = document.getElementById('add-note-input');
       const date = document.getElementById('add-date-input').value || today();
       const isNetBuy = (channel === '網購平台');
 
@@ -1519,7 +1740,7 @@
         date: date,
         isPaid: isNetBuy,
         isOutOfStock: false,
-        note: '',
+        note: noteInput.value.trim(),
         image: addFormState.image,
         settlementDate: isNetBuy ? date : null
       };
@@ -1535,9 +1756,10 @@
         addingOrder = false;
       }
 
+      noteInput.value = '';
       if (keepNextSpec) {
         document.getElementById('add-spec-input').value = '';
-        showToast('已儲存！保留渠道/品項/圖片，請輸入下一款規格', '➕');
+        showToast('已儲存！請輸入下一款規格與備註。', '➕');
       } else {
         // Full reset form
         document.getElementById('add-name-input').value = '';
@@ -1611,19 +1833,19 @@
         const categorySelect = document.getElementById('filter-category');
         if (all) {
           const channels = [...new Set(all.map(order => order.channel))];
-          const categories = [...new Set(all.map(orderCategory))];
+          const subcategories = [...new Set(all.map(order => order.subCategory))].sort((a, b) => a.localeCompare(b, 'zh-TW'));
           const previousChannel = channelSelect.value;
           const previousCategory = categorySelect.value;
           fillOptions(channelSelect, channels, `所有購買渠道 (${channels.length})`);
-          fillOptions(categorySelect, categories, `所有分類 (${categories.length})`);
+          fillOptions(categorySelect, subcategories, `所有小分類 (${subcategories.length})`);
           channelSelect.value = channels.includes(previousChannel) ? previousChannel : '';
-          categorySelect.value = categories.includes(previousCategory) ? previousCategory : '';
+          categorySelect.value = subcategories.includes(previousCategory) ? previousCategory : '';
         }
         const keyword = document.getElementById('search-keyword').value.toLowerCase().trim();
         const chars = [...new Set(keyword)];
         const filtered = orders.filter(order => {
           if (channelSelect.value && order.channel !== channelSelect.value) return false;
-          if (categorySelect.value && orderCategory(order) !== categorySelect.value) return false;
+          if (categorySelect.value && order.subCategory !== categorySelect.value) return false;
           const target = `${order.name} ${order.spec} ${order.channel} ${orderCategory(order)} ${order.note}`.toLowerCase();
           return chars.every(char => target.includes(char));
         }).sort((a, b) => b.date.localeCompare(a.date));
@@ -1643,6 +1865,13 @@
     function orderAmount(order) {
       try { return formatMoney(subtotal([order])); }
       catch { return '金額無效'; }
+    }
+
+    function appendOrderNote(target, note) {
+      if (!note?.trim()) return;
+      const row = element('p', 'mt-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] text-slate-700 whitespace-pre-wrap break-words');
+      row.append(element('span', 'font-bold', '備註：'), element('span', '', note));
+      target.append(row);
     }
 
     function renderOrderCard(order) {
@@ -1668,7 +1897,9 @@
       footer.append(element('span', '', `喊單日：${order.date}`), buttons);
       details.append(badges,
         element('h3', 'text-xs font-bold text-slate-800 truncate' + (order.isOutOfStock ? ' line-through' : ''), order.name),
-        summary, footer);
+        summary);
+      appendOrderNote(details, order.note);
+      details.append(footer);
       row.append(thumbnail(order, 'w-16 h-16 object-cover rounded-xl border border-slate-200 shadow-sm',
         'w-16 h-16 rounded-xl bg-rose-50 grid place-items-center flex-shrink-0'), details);
       return row;
@@ -1691,7 +1922,7 @@
       imageVersions.edit++;
 
       const o = normalizeOrder(raw);
-      editFormState = { image: o.image, channel: o.channel };
+      editFormState = { image: o.image, channel: o.channel, mainCategory: o.mainCategory, subCategory: o.subCategory };
 
       document.getElementById('edit-name-input').value = o.name;
       document.getElementById('edit-spec-input').value = o.spec;
@@ -1702,15 +1933,7 @@
       document.getElementById('edit-is-paid').checked = o.isPaid;
       document.getElementById('edit-note-input').value = o.note || '';
 
-      const mainSelect = document.getElementById('edit-main-cat');
-      const subSelect = document.getElementById('edit-sub-cat');
-      fillOptions(mainSelect, [...new Set([...Object.keys(CATEGORIES), o.mainCategory])]);
-      mainSelect.value = o.mainCategory;
-      onMainCatChange('edit', o.mainCategory);
-      if (![...subSelect.options].some(option => option.value === o.subCategory)) {
-        subSelect.add(new Option(o.subCategory, o.subCategory));
-      }
-      subSelect.value = o.subCategory;
+      fillCategoryDropdowns('edit', o.mainCategory, o.subCategory);
 
       selectChannel('edit', o.channel);
       document.getElementById('edit-img-input').value = '';
@@ -1762,10 +1985,16 @@
         image: editFormState.image
       };
 
+      const sameCategory = updated.mainCategory === editFormState.mainCategory && updated.subCategory === editFormState.subCategory;
+      if (!sameCategory && !categorySubgroups(updated.mainCategory).includes(updated.subCategory)) {
+        showToast('請選擇有效的小分類。', '⚠️');
+        return;
+      }
+
       savingEdit = true;
       try {
         validateOrder(updated);
-        await OrderStorage.updateOrder(updated);
+        await OrderStorage.updateOrder(updated, sameCategory);
       } catch (err) {
         showToast('無法儲存變更：' + (err?.message || '資料庫寫入失敗'), '⚠️');
         return;
@@ -1840,6 +2069,7 @@
         element('div', 'font-bold text-slate-800 truncate' + (order.isOutOfStock ? ' line-through' : ''), order.name),
         element('div', 'text-[11px] text-slate-600', `規格：${order.spec || '預設'}（${order.date}）`)
       );
+      appendOrderNote(details, order.note);
       const controls = element('div', 'text-right flex-shrink-0 space-y-1');
       const buttons = element('div', 'flex justify-end gap-1');
       buttons.append(
@@ -1952,6 +2182,11 @@
         action('退回未付款', 'text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 font-bold',
           () => unsettleOrder(order.id)));
       row.append(info, controls);
+      if (order.note?.trim()) {
+        const note = element('div', 'w-full');
+        appendOrderNote(note, order.note);
+        row.append(note);
+      }
       return row;
     }
 
@@ -2064,7 +2299,7 @@
         return;
       }
       const { orders } = data;
-      const backupData = { version: '3.0.0', exportDate: new Date().toISOString(), ...data };
+      const backupData = { version: '3.1.0', exportDate: new Date().toISOString(), ...data };
 
       const jsonStr = JSON.stringify(backupData, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -2120,7 +2355,7 @@
 
     async function processImportContent(jsonString) {
       const data = parseBackup(jsonString);
-      if (!data.orders.length && !data.settlements.length && !data.channels.length) {
+      if (!data.orders.length && !data.settlements.length && !data.channels.length && data.categories === null) {
         showToast('備份檔中沒有可還原的資料。', '⚠️');
         return false;
       }
@@ -2128,8 +2363,10 @@
       const overwritten = await OrderStorage.findBackupConflicts(data);
       if (overwritten && !confirm(`有 ${overwritten} 筆相同 ID 的本機資料。要用備份覆蓋這些資料嗎？`)) return false;
 
-      channels = await OrderStorage.writeBackup(data, channels, overwritten);
+      ({ channels, categories } = await OrderStorage.writeBackup(data, channels, overwritten));
       refreshChannels();
+      refreshCategoryDropdowns();
+      if (currentTab === 'settings') renderCategorySettings();
       showToast(`已還原 ${data.orders.length} 筆訂單、${data.settlements.length} 筆月結紀錄。`, '🎉');
       renderHeaderStats();
       if (currentTab === 'search') renderSearchTab();
@@ -2189,9 +2426,11 @@
   "spec": "顏色/尺寸/規格 (如 白色 L)",
   "unitPrice": 數字單價 (如 390，只填數字),
   "qty": 數量 (數字),
-  "mainCategory": "女兒" 或 "兒子" 或 "自用" 或 "家用",
+  "mainCategory": "符合的大分類名稱",
   "subCategory": "子分類名稱"
 }
+分類請使用清單中成對的大分類與小分類，無法判斷時將兩個欄位留空：
+${JSON.stringify(categories)}
 只返回純 JSON，不要 Markdown 標記或其他文字。`;
 
         const request = {
@@ -2230,12 +2469,8 @@
             document.getElementById('add-price-input').value = result.unitPrice;
           }
           if (Number.isSafeInteger(result.qty) && result.qty > 0) document.getElementById('add-qty-input').value = result.qty;
-          if (!addFormState.isUserCategoryTouched && Object.hasOwn(CATEGORIES, result.mainCategory)) {
-            document.getElementById('add-main-cat').value = result.mainCategory;
-            onMainCatChange('add', result.mainCategory);
-            if (CATEGORIES[result.mainCategory].includes(result.subCategory)) {
-              document.getElementById('add-sub-cat').value = result.subCategory;
-            }
+          if (!addFormState.isUserCategoryTouched && categorySubgroups(result.mainCategory).includes(result.subCategory)) {
+            selectAddCategory(result.mainCategory, result.subCategory);
           }
           checkDuplicateWarning();
         } else {
